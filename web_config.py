@@ -4,13 +4,17 @@ UAV Watcher — web config UI.
 Run: python3 web_config.py
 Open: http://localhost:8422
 """
-import asyncio
 import json
 import os
 import re
 import subprocess
+import urllib.request
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import parse_qs, urlparse
+
+LOCKED_CHANNELS = {
+    -1001223955273: {"title": "Повітряні Сили ЗС України", "username": "kpszsu", "id": -1001223955273}
+}
 
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config.json")
 ENV_PATH = os.path.join(os.path.dirname(__file__), ".env")
@@ -45,6 +49,42 @@ def save_env(api_id: str, api_hash: str, phone: str):
         f.write(f"TELEGRAM_API_ID={api_id}\n")
         f.write(f"TELEGRAM_API_HASH={api_hash}\n")
         f.write(f"TELEGRAM_PHONE={phone}\n")
+
+
+def get_user_channels(cfg: dict) -> list:
+    locked_ids = set(LOCKED_CHANNELS.keys())
+    raw = cfg.get("channels", [])
+    meta = cfg.get("channels_meta", {})
+    result = []
+    for ch_id in raw:
+        if ch_id not in locked_ids:
+            m = meta.get(str(ch_id), {})
+            result.append({"id": ch_id, "title": m.get("title", str(ch_id)), "username": m.get("username", "")})
+    return result
+
+
+def resolve_via_bot_api(handle: str, bot_token: str) -> dict:
+    handle = handle.strip()
+    if not handle.startswith("@") and not handle.lstrip("-").isdigit():
+        handle = "@" + handle
+    url = f"https://api.telegram.org/bot{bot_token}/getChat?chat_id={urllib.request.quote(handle)}"
+    req = urllib.request.Request(url)
+    with urllib.request.urlopen(req, timeout=8) as resp:
+        data = json.loads(resp.read())
+    if not data.get("ok"):
+        raise ValueError(data.get("description", "Telegram error"))
+    result = data["result"]
+    raw_id = result["id"]
+    if raw_id > 0:
+        full_id = -(1000000000000 + raw_id)
+    else:
+        full_id = raw_id
+    return {
+        "ok": True,
+        "id": full_id,
+        "title": result.get("title", result.get("first_name", str(full_id))),
+        "username": result.get("username", ""),
+    }
 
 
 def restart_service():
@@ -132,6 +172,37 @@ HTML = """<!DOCTYPE html>
   .tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 2px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); font-family: var(--mono); font-size: 10px; color: var(--dim); }
   .channel-id { font-family: var(--mono); font-size: 11px; color: rgba(180,220,160,0.75); }
 
+  /* ── Channel list ── */
+  .ch-total { font-family: var(--mono); font-size: 10px; color: var(--amber); font-weight: 600; }
+  .ch-section { padding: 10px 16px; }
+  .ch-section-label { font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: 0.14em; color: var(--dim); text-transform: uppercase; margin-bottom: 8px; }
+  .ch-divider { height: 1px; background: var(--border); }
+  .ch-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .ch-row:last-child { border-bottom: none; }
+  .ch-locked { opacity: 0.85; }
+  .ch-pulse { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; position: relative; }
+  .ch-pulse::after { content:''; position:absolute; inset:-3px; border-radius:50%; animation: pulse 2.4s ease-in-out infinite; }
+  .ch-pulse-amber { background: var(--amber); }
+  .ch-pulse-amber::after { background: rgba(245,158,11,0.25); }
+  .ch-pulse-green { background: var(--green); }
+  .ch-pulse-green::after { background: rgba(34,197,94,0.2); }
+  @keyframes pulse { 0%,100%{transform:scale(1);opacity:0.5} 50%{transform:scale(2.2);opacity:0} }
+  .ch-info { flex: 1; min-width: 0; }
+  .ch-name { display: block; font-family: var(--mono); font-size: 11px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ch-handle { display: block; font-family: var(--mono); font-size: 9px; color: var(--dim); margin-top: 1px; }
+  .ch-badge-sys { padding: 2px 7px; border-radius: 2px; background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.3); font-family: var(--mono); font-size: 9px; font-weight: 700; color: var(--amber); letter-spacing: 0.1em; flex-shrink: 0; }
+  .ch-remove { background: none; border: none; color: var(--dim); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 2px; transition: color 0.15s; flex-shrink: 0; }
+  .ch-remove:hover { color: var(--red); }
+  .ch-add-wrap { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+  .ch-add-row { display: flex; gap: 8px; }
+  .ch-input { flex: 1; min-width: 0; padding: 7px 10px; background: var(--elevated); border: 1px solid var(--border); border-radius: 3px; color: var(--text); font-family: var(--mono); font-size: 11px; outline: none; transition: border-color 0.15s; }
+  .ch-input:focus { border-color: var(--border2); }
+  .ch-input::placeholder { color: rgba(255,255,255,0.18); }
+  .ch-btn { height: 34px; font-size: 10px; }
+  .ch-preview { background: var(--elevated); border: 1px solid var(--border2); border-radius: 3px; padding: 8px 12px; display: flex; align-items: center; gap: 10px; }
+  .ch-preview-name { font-family: var(--mono); font-size: 11px; color: var(--text); flex: 1; }
+  .ch-preview-id { font-family: var(--mono); font-size: 9px; color: var(--dim); }
+
   details { border: none; }
   details[open] summary { color: var(--amber); }
   summary.steps-toggle { cursor: pointer; font-family: var(--mono); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); list-style: none; display: flex; align-items: center; gap: 6px; padding: 4px 0; transition: color 0.15s; user-select: none; }
@@ -183,23 +254,49 @@ HTML = """<!DOCTYPE html>
     </div>
 
     <!-- CHANNELS -->
-    <div class="card">
-      <div class="card-header"><span class="card-title">📡 Telegram-канали</span></div>
-      <form method="POST" action="/save-channels">
-      <div class="card-body">
-        <div>
-          <label>ID каналів (по одному на рядок, від'ємні числа)</label>
-          <textarea name="channels" rows="4">{channels_text}</textarea>
-          <div class="hint" style="margin-top:5px">
-            Від'ємний ID: <code>-1002187970584</code>. Отримати ID каналу: перейди в web.telegram.org, відкрий канал — число в URL.<br>
-            Або використай <code>@username_to_id_bot</code> — перешли повідомлення з каналу, отримаєш ID.
+    <div class="card" id="channels-card">
+      <div class="card-header" style="justify-content:space-between">
+        <span class="card-title">📡 Канали моніторингу</span>
+        <span class="ch-total" id="ch-total">{channel_total} активних</span>
+      </div>
+      <div style="padding:0">
+
+        <div class="ch-section">
+          <div class="ch-section-label">🔒 СИСТЕМНИЙ — ЗАВЖДИ АКТИВНИЙ</div>
+          <div class="ch-row ch-locked">
+            <span class="ch-pulse ch-pulse-amber"></span>
+            <div class="ch-info">
+              <span class="ch-name">Повітряні Сили ЗС України</span>
+              <span class="ch-handle">@kpszsu · -1001223955273</span>
+            </div>
+            <span class="ch-badge-sys">SYSTEM</span>
           </div>
         </div>
-        <div class="btn-row">
-          <button type="submit" class="btn btn-primary">Зберегти канали</button>
+
+        <div class="ch-divider"></div>
+
+        <div class="ch-section">
+          <div class="ch-section-label">📻 ВАШІ КАНАЛИ <span id="user-ch-count" style="font-weight:400;opacity:0.6">{user_channel_count}</span></div>
+          <div id="user-channels-list">
+            {user_channels_html}
+          </div>
+
+          <div class="ch-add-wrap">
+            <div class="ch-add-row">
+              <input type="text" id="ch-input" class="ch-input" placeholder="@username або -1001234567890"
+                onkeydown="if(event.key==='Enter'){resolveChannel()}">
+              <button class="btn btn-ghost ch-btn" onclick="resolveChannel()" id="ch-resolve-btn" style="white-space:nowrap">Перевірити</button>
+            </div>
+            <div id="ch-preview" class="ch-preview" style="display:none"></div>
+          </div>
         </div>
+
+        <div class="ch-divider"></div>
+        <div class="ch-section" style="padding-bottom:14px">
+          <div class="hint">Знайти ID каналу: відкрий web.telegram.org → будь-який канал → число в URL після <code>-100</code>. Або напиши <a href="https://t.me/userinfobot" target="_blank">@userinfobot</a> і перешли повідомлення з каналу.</div>
+        </div>
+
       </div>
-      </form>
     </div>
 
     <!-- TELEGRAM CREDENTIALS -->
@@ -353,6 +450,98 @@ HTML = """<!DOCTYPE html>
   </div>
 </div>
 <script>
+// ── Channel management ──────────────────────────────────────────────────
+let resolvedChannel = null;
+
+async function resolveChannel() {
+  const input = document.getElementById('ch-input');
+  const preview = document.getElementById('ch-preview');
+  const btn = document.getElementById('ch-resolve-btn');
+  const val = input.value.trim();
+  if (!val) return;
+
+  btn.disabled = true;
+  btn.textContent = '...';
+  preview.style.display = 'none';
+  resolvedChannel = null;
+
+  try {
+    const r = await fetch('/resolve-channel', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({handle: val})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      resolvedChannel = d;
+      preview.style.display = 'flex';
+      preview.innerHTML = `
+        <span class="ch-pulse ch-pulse-green" style="flex-shrink:0"></span>
+        <span class="ch-preview-name">${d.title}</span>
+        <span class="ch-preview-id">${d.username ? '@'+d.username+' · ' : ''}${d.id}</span>
+        <button class="btn btn-primary ch-btn" onclick="addChannel()" style="height:28px;font-size:10px">+ Додати</button>`;
+    } else {
+      preview.style.display = 'flex';
+      preview.innerHTML = `<span style="font-family:var(--mono);font-size:11px;color:var(--red)">${d.error}</span>`;
+    }
+  } catch(e) {
+    preview.style.display = 'flex';
+    preview.innerHTML = `<span style="font-family:var(--mono);font-size:11px;color:var(--red)">Помилка з'єднання</span>`;
+  }
+  btn.disabled = false;
+  btn.textContent = 'Перевірити';
+}
+
+async function addChannel() {
+  if (!resolvedChannel) return;
+  const r = await fetch('/add-channel', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(resolvedChannel)
+  });
+  const d = await r.json();
+  if (d.ok) {
+    document.getElementById('ch-input').value = '';
+    document.getElementById('ch-preview').style.display = 'none';
+    resolvedChannel = null;
+    refreshChannels();
+  }
+}
+
+async function removeChannel(id) {
+  const r = await fetch('/remove-channel', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({id: id})
+  });
+  const d = await r.json();
+  if (d.ok) refreshChannels();
+}
+
+async function refreshChannels() {
+  const r = await fetch('/api/channels');
+  const d = await r.json();
+  const list = document.getElementById('user-channels-list');
+  const count = document.getElementById('user-ch-count');
+  const total = document.getElementById('ch-total');
+  list.innerHTML = d.user_channels.map(ch => channelRow(ch)).join('') || '<div style="padding:6px 0;font-family:var(--mono);font-size:10px;color:var(--dim)">— немає власних каналів —</div>';
+  count.textContent = d.user_channels.length;
+  total.textContent = (d.user_channels.length + d.locked_count) + ' активних';
+}
+
+function channelRow(ch) {
+  const handle = ch.username ? `@${ch.username} · ` : '';
+  return `<div class="ch-row">
+    <span class="ch-pulse ch-pulse-green"></span>
+    <div class="ch-info">
+      <span class="ch-name">${ch.title || ch.id}</span>
+      <span class="ch-handle">${handle}${ch.id}</span>
+    </div>
+    <button class="ch-remove" onclick="removeChannel(${ch.id})" title="Видалити">×</button>
+  </div>`;
+}
+
+// ── Test notification ────────────────────────────────────────────────────
 async function sendTest() {
   const btn = event.target;
   const res = document.getElementById('test-result');
@@ -396,8 +585,24 @@ class Handler(BaseHTTPRequestHandler):
         if flash:
             flash_html = f'<div class="flash {flash_type}">{flash}</div>'
 
-        channels_text = "\n".join(str(c) for c in cfg.get("channels", []))
         keywords_str = ", ".join(cfg.get("city_keywords", []))
+        user_chs = get_user_channels(cfg)
+
+        def _ch_row(ch):
+            handle = f"@{ch['username']} · " if ch.get("username") else ""
+            return (
+                f'<div class="ch-row">'
+                f'<span class="ch-pulse ch-pulse-green"></span>'
+                f'<div class="ch-info">'
+                f'<span class="ch-name">{ch["title"]}</span>'
+                f'<span class="ch-handle">{handle}{ch["id"]}</span>'
+                f'</div>'
+                f'<button class="ch-remove" onclick="removeChannel({ch["id"]})" title="Видалити">×</button>'
+                f'</div>'
+            )
+
+        user_channels_html = "".join(_ch_row(ch) for ch in user_chs) if user_chs else \
+            '<div style="padding:6px 0;font-family:var(--mono);font-size:10px;color:var(--dim)">— немає власних каналів —</div>'
 
         import re as _re
         vars_ = {
@@ -407,7 +612,6 @@ class Handler(BaseHTTPRequestHandler):
             "city": cfg.get("city", ""),
             "city_region": cfg.get("city_region", ""),
             "city_keywords": keywords_str,
-            "channels_text": channels_text,
             "phone": env.get("TELEGRAM_PHONE", ""),
             "api_id": env.get("TELEGRAM_API_ID", ""),
             "api_hash": env.get("TELEGRAM_API_HASH", ""),
@@ -415,6 +619,9 @@ class Handler(BaseHTTPRequestHandler):
             "bot_token": cfg.get("bot_token", ""),
             "channel_count": str(len(cfg.get("channels", []))),
             "model": cfg.get("goclaw_model", ""),
+            "user_channels_html": user_channels_html,
+            "user_channel_count": str(len(user_chs)),
+            "channel_total": str(len(user_chs) + len(LOCKED_CHANNELS)),
         }
         html = _re.sub(r'\{([a-z_]+)\}', lambda m: vars_.get(m.group(1), m.group(0)), HTML)
         self.send_response(200)
@@ -437,6 +644,12 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urlparse(self.path)
+        path = parsed.path
+        if path == "/api/channels":
+            cfg = load_config()
+            user_chs = get_user_channels(cfg)
+            self.send_json({"user_channels": user_chs, "locked_count": len(LOCKED_CHANNELS)})
+            return
         params = parse_qs(parsed.query)
         flash = params.get("flash", [None])[0]
         ft = params.get("ft", ["ok"])[0]
@@ -456,6 +669,64 @@ class Handler(BaseHTTPRequestHandler):
         get = lambda k: data.get(k, [""])[0].strip()
 
         path = urlparse(self.path).path
+
+        # JSON API endpoints (Content-Type: application/json)
+        content_type = self.headers.get("Content-Type", "")
+        if "application/json" in content_type:
+            try:
+                payload = json.loads(body) if body else {}
+            except Exception:
+                payload = {}
+            cfg = load_config()
+
+            if path == "/resolve-channel":
+                handle = payload.get("handle", "").strip()
+                token = cfg.get("bot_token", "")
+                if not token:
+                    self.send_json({"ok": False, "error": "Спочатку збережіть Bot Token"})
+                    return
+                if not handle:
+                    self.send_json({"ok": False, "error": "Введіть username або ID"})
+                    return
+                try:
+                    result = resolve_via_bot_api(handle, token)
+                    if result["id"] in LOCKED_CHANNELS:
+                        self.send_json({"ok": False, "error": "Цей канал вже є в системному списку"})
+                    else:
+                        self.send_json(result)
+                except Exception as e:
+                    self.send_json({"ok": False, "error": f"Не знайдено: {str(e)[:80]}"})
+                return
+
+            if path == "/add-channel":
+                ch_id = int(payload.get("id", 0))
+                title = str(payload.get("title", str(ch_id)))
+                username = str(payload.get("username", ""))
+                if ch_id in LOCKED_CHANNELS:
+                    self.send_json({"ok": False, "error": "Системний канал"})
+                    return
+                channels = cfg.get("channels", [])
+                if ch_id not in channels:
+                    channels.append(ch_id)
+                    cfg["channels"] = channels
+                meta = cfg.setdefault("channels_meta", {})
+                meta[str(ch_id)] = {"title": title, "username": username}
+                save_config(cfg)
+                self.send_json({"ok": True})
+                return
+
+            if path == "/remove-channel":
+                ch_id = int(payload.get("id", 0))
+                if ch_id in LOCKED_CHANNELS:
+                    self.send_json({"ok": False, "error": "Системний канал не можна видалити"})
+                    return
+                channels = cfg.get("channels", [])
+                cfg["channels"] = [c for c in channels if c != ch_id]
+                meta = cfg.get("channels_meta", {})
+                meta.pop(str(ch_id), None)
+                save_config(cfg)
+                self.send_json({"ok": True})
+                return
 
         if path == "/send-test":
             import urllib.request

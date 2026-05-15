@@ -102,7 +102,9 @@ async def main():
     city = cfg.get("city", "Олександрія")
     keywords = cfg.get("city_keywords", [city])
     city_pattern = re.compile("|".join(re.escape(k) for k in keywords), re.IGNORECASE)
-    channels = cfg["channels"]
+    LOCKED = [-1001223955273]
+    user_channels = cfg.get("channels", [])
+    channels = list(set(LOCKED + user_channels))
 
     log.info(f"City: {city} | Keywords: {keywords}")
     log.info(f"Channels: {channels}")
