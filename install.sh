@@ -108,22 +108,30 @@ read -r NOTIFY_ID
 echo ""
 echo -e "${BOLD}══ AI СЕРВІС ══${NC}"
 echo ""
-warn "Для класифікації потрібен OpenAI-сумісний endpoint"
-echo "  Варіанти:"
-echo "  1) OpenAI (api.openai.com) — потрібен API ключ"
-echo "  2) Свій сервер goclaw (http://IP:18880)"
-echo "  3) Інший OpenAI-compatible API"
+echo "  Для класифікації загроз використовується AI-проксі."
 echo ""
-ask "Введи URL AI endpoint (Enter = https://api.openai.com/v1/chat/completions):"
-read -r AI_URL
-AI_URL="${AI_URL:-https://api.openai.com/v1/chat/completions}"
+echo -e "  ${GREEN}[1] Спільний проксі (за замовчуванням)${NC} — безкоштовно, не потрібен ключ"
+echo -e "      ${CYAN}openai-proxy.exodus.pp.ua${NC}"
+echo -e "  ${YELLOW}[2] Свій AI endpoint${NC} — OpenAI, Groq, OpenRouter або власний сервер"
+echo ""
+ask "Вибір (Enter = 1, спільний проксі):"
+read -r AI_CHOICE
 
-ask "Введи AI API ключ:"
-read -r AI_KEY
-
-ask "Введи назву моделі (Enter = gpt-4o-mini):"
-read -r AI_MODEL
-AI_MODEL="${AI_MODEL:-gpt-4o-mini}"
+if [ "$AI_CHOICE" = "2" ]; then
+    ask "Введи URL AI endpoint (наприклад https://api.openai.com/v1/chat/completions):"
+    read -r AI_URL
+    ask "Введи API ключ:"
+    read -r AI_KEY
+    ask "Введи назву моделі (Enter = gpt-4o-mini):"
+    read -r AI_MODEL
+    AI_MODEL="${AI_MODEL:-gpt-4o-mini}"
+    success "Використовуватиметься власний AI endpoint"
+else
+    AI_URL="https://openai-proxy.exodus.pp.ua/v1/chat/completions"
+    AI_KEY="freecc"
+    AI_MODEL="fast-proxy"
+    success "Використовуватиметься спільний AI проксі (openai-proxy.exodus.pp.ua)"
+fi
 
 # Генерація keywords з назви міста
 CITY_FIRST4="${CITY:0:4}"
