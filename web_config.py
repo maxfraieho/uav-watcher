@@ -132,6 +132,15 @@ HTML = """<!DOCTYPE html>
   .tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 2px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); font-family: var(--mono); font-size: 10px; color: var(--dim); }
   .channel-id { font-family: var(--mono); font-size: 11px; color: rgba(180,220,160,0.75); }
 
+  details { border: none; }
+  details[open] summary { color: var(--amber); }
+  summary.steps-toggle { cursor: pointer; font-family: var(--mono); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); list-style: none; display: flex; align-items: center; gap: 6px; padding: 4px 0; transition: color 0.15s; user-select: none; }
+  summary.steps-toggle::before { content: '▶'; font-size: 8px; transition: transform 0.2s; display: inline-block; }
+  details[open] summary.steps-toggle::before { transform: rotate(90deg); }
+  summary.steps-toggle:hover { color: rgba(255,255,255,0.7); }
+  .test-ok  { background: rgba(34,197,94,0.1);  border: 1px solid rgba(34,197,94,0.25);  color: var(--green); padding: 7px 10px; border-radius: 3px; font-family: var(--mono); font-size: 10px; }
+  .test-err { background: rgba(239,68,68,0.1);  border: 1px solid rgba(239,68,68,0.25);  color: var(--red);   padding: 7px 10px; border-radius: 3px; font-family: var(--mono); font-size: 10px; }
+
   @media (max-width: 750px) { .layout { flex-direction: column; } .col-side { width: 100%; } }
 </style>
 </head>
@@ -239,33 +248,29 @@ HTML = """<!DOCTYPE html>
 
     <!-- USER ID INSTRUCTION -->
     <div class="card">
-      <div class="card-header"><span class="card-title">📲 Як дізнатись свій Telegram User ID</span></div>
+      <div class="card-header"><span class="card-title">📲 Куди надсилати сповіщення</span></div>
       <div class="card-body">
+        <div class="hint" style="margin-bottom:10px;line-height:1.7">Сповіщення надходять у твій особистий чат із ботом. Потрібно спочатку <strong style="color:rgba(255,255,255,0.75)">відкрити свого бота в Telegram і натиснути /start</strong> — без цього кроку бот не зможе писати тобі.</div>
         <div class="step-list">
           <div class="step">
             <div class="step-num">1</div>
-            <div class="step-text">Відкрий Telegram і знайди бота <code>@userinfobot</code></div>
+            <div class="step-text">Знайди свого бота в Telegram (по username який ти вказав у BotFather) → натисни <code>/start</code></div>
           </div>
           <div class="step">
             <div class="step-num">2</div>
-            <div class="step-text">Натисни <code>/start</code> або надішли будь-яке повідомлення</div>
+            <div class="step-text">Дізнайся свій User ID — напиши <a href="https://t.me/userinfobot" target="_blank">@userinfobot</a> або <a href="https://t.me/getmyid_bot" target="_blank">@getmyid_bot</a> → <code>/start</code></div>
           </div>
           <div class="step">
             <div class="step-num">3</div>
-            <div class="step-text">Бот відповість: <code>Id: 123456789</code> — це і є твій User ID</div>
-          </div>
-          <div class="step">
-            <div class="step-num">4</div>
-            <div class="step-text">Також можна написати <code>@getmyid_bot</code> — він одразу покаже ID без зайвих слів</div>
+            <div class="step-text">Бот відповість числом — це твій <code>Chat ID</code>. Введи його нижче.</div>
           </div>
         </div>
         <div class="separator"></div>
-        <div>
-          <label>Notify Chat ID (куди слати сповіщення)</label>
-          <input type="text" form="notify_form" name="notify_chat_id" value="{notify_chat_id}" placeholder="123456789">
-        </div>
-        <form id="notify_form" method="POST" action="/save-notify">
-          <input type="hidden" name="notify_chat_id" value="{notify_chat_id}">
+        <form method="POST" action="/save-notify">
+          <div>
+            <label>Notify Chat ID (твій Telegram User ID)</label>
+            <input type="text" name="notify_chat_id" value="{notify_chat_id}" placeholder="123456789">
+          </div>
           <div class="btn-row" style="margin-top:8px">
             <button type="submit" class="btn btn-primary" style="height:30px;font-size:10px;">Зберегти Chat ID</button>
           </div>
@@ -293,23 +298,82 @@ HTML = """<!DOCTYPE html>
 
     <!-- BOT TOKEN -->
     <div class="card">
-      <div class="card-header"><span class="card-title">🤖 Telegram Bot</span></div>
-      <form method="POST" action="/save-bot">
+      <div class="card-header"><span class="card-title">🤖 Telegram Bot — сповіщувач</span></div>
       <div class="card-body">
-        <div class="hint" style="margin-bottom:8px">Токен бота-сповіщувача. Отримати через <code>@BotFather</code> → /newbot</div>
-        <div>
-          <label>Bot Token</label>
-          <input type="text" name="bot_token" value="{bot_token}" placeholder="1234567890:AAE...">
-        </div>
-        <div class="btn-row" style="margin-top:4px">
-          <button type="submit" class="btn btn-primary" style="height:30px;font-size:10px;">Зберегти</button>
-        </div>
+
+        <details open>
+          <summary class="steps-toggle">Як створити бота через BotFather</summary>
+          <div class="steps-body">
+            <div class="step-list" style="margin-top:10px">
+              <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-text">Відкрий Telegram і знайди бота <a href="https://t.me/BotFather" target="_blank">@BotFather</a> — натисни <code>/start</code></div>
+              </div>
+              <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-text">Надішли команду <code>/newbot</code></div>
+              </div>
+              <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-text">Введи назву бота (будь-яку, наприклад <code>Мій UAV Watcher</code>)</div>
+              </div>
+              <div class="step">
+                <div class="step-num">4</div>
+                <div class="step-text">Введи username бота — латиницею, повинен закінчуватись на <code>_bot</code> (наприклад <code>my_uav_bot</code>)</div>
+              </div>
+              <div class="step">
+                <div class="step-num">5</div>
+                <div class="step-text">BotFather надішле токен вигляду <code>1234567890:AAEfzH9...</code> — скопіюй його</div>
+              </div>
+              <div class="step step-warn">
+                <div class="step-num" style="background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.35);color:var(--red)">!</div>
+                <div class="step-text" style="color:rgba(255,120,120,0.85)">Знайди свого нового бота в Telegram і натисни <code>/start</code> — інакше бот не зможе надсилати тобі повідомлення</div>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <div class="separator" style="margin:4px 0"></div>
+
+        <form method="POST" action="/save-bot" id="bot-form">
+          <div>
+            <label>Bot Token</label>
+            <input type="text" name="bot_token" value="{bot_token}" placeholder="1234567890:AAEfzH9fq4jM81gy...">
+          </div>
+          <div class="btn-row" style="margin-top:10px">
+            <button type="submit" class="btn btn-primary" style="height:30px;font-size:10px;">Зберегти токен</button>
+            <button type="button" class="btn btn-ghost" style="height:30px;font-size:10px;" onclick="sendTest()">▶ Тест</button>
+          </div>
+          <div id="test-result" style="margin-top:8px;display:none"></div>
+        </form>
+
       </div>
-      </form>
     </div>
 
   </div>
 </div>
+<script>
+async function sendTest() {
+  const btn = event.target;
+  const res = document.getElementById('test-result');
+  btn.disabled = true;
+  btn.textContent = '...';
+  res.style.display = 'none';
+  try {
+    const r = await fetch('/send-test', {method:'POST'});
+    const d = await r.json();
+    res.style.display = 'block';
+    res.className = d.ok ? 'test-ok' : 'test-err';
+    res.textContent = d.message;
+  } catch(e) {
+    res.style.display = 'block';
+    res.className = 'test-err';
+    res.textContent = 'Помилка з\'єднання';
+  }
+  btn.disabled = false;
+  btn.textContent = '▶ Тест';
+}
+</script>
 </body>
 </html>"""
 
@@ -335,22 +399,24 @@ class Handler(BaseHTTPRequestHandler):
         channels_text = "\n".join(str(c) for c in cfg.get("channels", []))
         keywords_str = ", ".join(cfg.get("city_keywords", []))
 
-        html = HTML.format(
-            status_class="ok" if running else "err",
-            status_text="● запущено" if running else "● зупинено",
-            flash_html=flash_html,
-            city=cfg.get("city", ""),
-            city_region=cfg.get("city_region", ""),
-            city_keywords=keywords_str,
-            channels_text=channels_text,
-            phone=env.get("TELEGRAM_PHONE", ""),
-            api_id=env.get("TELEGRAM_API_ID", ""),
-            api_hash=env.get("TELEGRAM_API_HASH", ""),
-            notify_chat_id=cfg.get("notify_chat_id", ""),
-            bot_token=cfg.get("bot_token", ""),
-            channel_count=len(cfg.get("channels", [])),
-            model=cfg.get("goclaw_model", ""),
-        )
+        import re as _re
+        vars_ = {
+            "status_class": "ok" if running else "err",
+            "status_text": "● запущено" if running else "● зупинено",
+            "flash_html": flash_html,
+            "city": cfg.get("city", ""),
+            "city_region": cfg.get("city_region", ""),
+            "city_keywords": keywords_str,
+            "channels_text": channels_text,
+            "phone": env.get("TELEGRAM_PHONE", ""),
+            "api_id": env.get("TELEGRAM_API_ID", ""),
+            "api_hash": env.get("TELEGRAM_API_HASH", ""),
+            "notify_chat_id": str(cfg.get("notify_chat_id", "")),
+            "bot_token": cfg.get("bot_token", ""),
+            "channel_count": str(len(cfg.get("channels", []))),
+            "model": cfg.get("goclaw_model", ""),
+        }
+        html = _re.sub(r'\{([a-z_]+)\}', lambda m: vars_.get(m.group(1), m.group(0)), HTML)
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.end_headers()
@@ -376,12 +442,47 @@ class Handler(BaseHTTPRequestHandler):
         ft = params.get("ft", ["ok"])[0]
         self.send_page(flash, ft)
 
+    def send_json(self, data: dict, status=200):
+        body = json.dumps(data, ensure_ascii=False).encode()
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     def do_POST(self):
         body = self.read_body()
         data = parse_qs(body)
         get = lambda k: data.get(k, [""])[0].strip()
 
         path = urlparse(self.path).path
+
+        if path == "/send-test":
+            import urllib.request
+            cfg = load_config()
+            token = cfg.get("bot_token", "")
+            chat_id = cfg.get("notify_chat_id", "")
+            if not token or not chat_id:
+                self.send_json({"ok": False, "message": "Збережіть Bot Token та Chat ID перед тестуванням"})
+                return
+            try:
+                url = f"https://api.telegram.org/bot{token}/sendMessage"
+                payload = json.dumps({
+                    "chat_id": chat_id,
+                    "text": "✅ UAV Watcher — тестове повідомлення. Бот налаштовано правильно!",
+                    "parse_mode": "Markdown"
+                }).encode()
+                req = urllib.request.Request(url, data=payload,
+                    headers={"Content-Type": "application/json"})
+                with urllib.request.urlopen(req, timeout=8) as resp:
+                    result = json.loads(resp.read())
+                if result.get("ok"):
+                    self.send_json({"ok": True, "message": "✓ Тестове повідомлення надіслано! Перевір Telegram."})
+                else:
+                    self.send_json({"ok": False, "message": f"Telegram: {result.get('description', 'помилка')}"})
+            except Exception as e:
+                self.send_json({"ok": False, "message": f"Помилка: {str(e)[:120]}"})
+            return
 
         try:
             cfg = load_config()
