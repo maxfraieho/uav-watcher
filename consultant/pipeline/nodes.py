@@ -132,11 +132,13 @@ def detect_crisis_state(text: str) -> str | None:
 
     # Panic — caps + exclamations/questions + short + repetition
     caps_ratio = sum(1 for c in t if c.isupper()) / max(len(t), 1)
-    has_panic_punct = t.count("!") >= 2 or t.count("?") >= 2
+    # "?" alone is not panic. "!!" is screaming. Short words like "Ні" naturally hit 50% caps.
+    has_panic_punct = t.count("!") >= 2
     words = tl.split()
     has_repetition = len(words) != len(set(words)) and len(words) >= 4
+    is_caps_panic = caps_ratio > 0.4 and len(t) >= 10
 
-    if caps_ratio > 0.4 or (has_panic_punct and len(t) < 80) or has_repetition:
+    if is_caps_panic or (has_panic_punct and len(t) < 80) or has_repetition:
         return "ПАНІКА"
 
     return None
