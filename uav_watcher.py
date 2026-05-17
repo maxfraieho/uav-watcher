@@ -208,6 +208,20 @@ async def main():
             await asyncio.sleep(8)
             await event.respond(step)
 
+    @bot_app.on(events.NewMessage(pattern='/status|/статус|/безпечно'))
+    async def cmd_status(event):
+        import datetime
+        now = datetime.datetime.now().strftime('%H:%M %d.%m.%Y')
+        sender = await event.get_sender()
+        name = f"{sender.first_name or ''} {sender.last_name or ''}".strip() or "Користувач"
+        await event.respond(f"✅ Статус оновлено: {now}\n\nНадсилаємо сповіщення...")
+        msg = f"✅ *{name}* в безпеці\n🕐 {now}"
+        async with httpx.AsyncClient(timeout=10.0) as hclient:
+            await hclient.post(
+                f"https://api.telegram.org/bot{cfg['bot_token']}/sendMessage",
+                json={'chat_id': cfg['notify_chat_id'], 'text': msg, 'parse_mode': 'Markdown'}
+            )
+
     await bot_app.start(bot_token=cfg['bot_token'])
     log.info("Bot command handlers started.")
 
