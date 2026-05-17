@@ -169,6 +169,22 @@ async def main():
 
     log.info(f"UAV watcher started. Watching {len(channels)} channel(s). Press Ctrl+C to stop.")
 
+    # --- OFFICIAL API POLLER (Task 0.3) ---
+    if cfg.get('alerts_ua_token'):
+        from integrations.alerts_ua import AlertsUAPoller
+
+        async def on_official_alert(alert_type, location, started_at):
+            msg = f"🔴 *ОФІЦІЙНА ТРИВОГА* [{location}]\nТип: {alert_type}\nПочаток: {started_at}"
+            await send_notification(msg, f"Офіційна тривога: {alert_type}", cfg)
+
+        poller = AlertsUAPoller(
+            token=cfg['alerts_ua_token'],
+            region=cfg['city_region'],
+            callback=on_official_alert
+        )
+        asyncio.ensure_future(poller.poll_loop())
+        log.info("alerts.in.ua official poller started in background")
+
     # --- CRISIS CHATBOT BOT COMMANDS (Task 0.1) ---
     from bot.crisis_templates import TEMPLATES, THREAT_KEYBOARD, GROUNDING_STEPS
     from telethon.tl.types import KeyboardButtonCallback
