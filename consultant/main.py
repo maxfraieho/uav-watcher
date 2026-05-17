@@ -13,7 +13,6 @@ from typing import Optional
 
 load_dotenv()
 
-# Allow running from consultant/ dir OR from uav-watcher root
 _HERE = Path(__file__).parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
@@ -24,22 +23,26 @@ logging.basicConfig(level=logging.INFO)
 PORT          = int(os.getenv("CONSULTANT_PORT", "8770"))
 KNOWLEDGE_DIR = _HERE / "knowledge"
 MEMORY_DIR    = _HERE / "memory"
+PROJECT_ROOT  = _HERE.parent
 MEMORY_DIR.mkdir(exist_ok=True)
 
 _observer = None
+_watcher_thread = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global _observer
+    global _observer, _watcher_thread
     from knowledge_base import retrieval
-    from knowledge_base.watcher import start_watcher
+    from knowledge_base.watcher import start_watcher as start_kb_watcher
+    from situation_watcher import start_watcher as start_situation_watcher
     try:
         n = retrieval.init(KNOWLEDGE_DIR)
         log.info(f"[consultant] KB ready: {n} sections from {KNOWLEDGE_DIR}")
     except Exception as e:
         log.warning(f"[consultant] KB init failed: {e}")
-    _observer = start_watcher(KNOWLEDGE_DIR)
+    _observer = start_kb_watcher(KNOWLEDGE_DIR)
+    _watcher_thread = start_situation_watcher(PROJECT_ROOT)
     yield
     if _observer:
         _observer.stop()
@@ -74,8 +77,14 @@ def chat(req: ChatRequest):
     from knowledge_base.retrieval import retrieve
     try:
         result = get_graph().invoke(
-            {"messages": [], "query": req.message,
-             "kb_context": "", "reply": "", "session_id": req.session_id},
+            {
+                "messages": [],
+                "query": req.message,
+                "kb_context": "",
+                "web_context": "",
+                "reply": "",
+                "session_id": req.session_id,
+            },
             config={"configurable": {"thread_id": req.session_id}},
         )
     except Exception as e:
@@ -86,6 +95,14 @@ def chat(req: ChatRequest):
         session_id=req.session_id,
         kb_sections_used=len(retrieve(req.message, top_k=3)),
     )
+
+
+@app.get("/situation")
+def situation():
+    """Current situation from alerts.in.ua watchdog."""
+    from situation_watcher import read_situation
+    summary = read_situation(PROJECT_ROOT)
+    return {"summary": summary or "Дані ще не завантажені або застаріли."}
 
 
 @app.get("/kb/sections")

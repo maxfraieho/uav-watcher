@@ -1,4 +1,4 @@
-"""LangGraph nodes: retrieve_kb -> generate."""
+"""LangGraph nodes: retrieve_kb -> web_search -> generate."""
 import os
 import pathlib
 import httpx
@@ -8,6 +8,12 @@ from .states import CrisisState
 PROXY_URL   = os.getenv("PROXY_URL", "http://localhost:18880/v1")
 PROXY_TOKEN = os.getenv("PROXY_TOKEN", "freecc")
 PROXY_MODEL = os.getenv("PROXY_MODEL", "docs-assistant-proxy")
+
+_WEB_SEARCH_KEYWORDS = [
+    "де ", "найближч", "бомбосховищ", "укрит", "зараз", "ситуаці",
+    "новин", "адрес", "знайти", "поруч", "where", "shelter",
+    "nearest", "news", "current", "address", "find", "nearby",
+]
 
 SYSTEM_PROMPT = """Ти — кризовий консультант системи UAV Watcher.
 Твоя роль: надавати точні, практичні інструкції цивільним людям під час
@@ -19,12 +25,12 @@ SYSTEM_PROMPT = """Ти — кризовий консультант систем
 - Відповідай УКРАЇНСЬКОЮ мовою (якщо користувач пише іншою — відповідай тією ж мовою)
 - Стисло і по пунктах. Максимум 5-7 рядків на відповідь
 - При загрозі життю — починай з найважливішої дії, без вступів
-- Використовуй емодзі тільки функціонально: ✅ дія, ⚠️ увага, 📞 телефон, 🏠 укриття
+- Використовуй емодзі тільки функціонально
 
 **Тон:**
 - Спокійний, впевнений, без паніки
 - Директивний при кризі ("ляж на підлогу", а не "рекомендується лягти")
-- Теплий та підтримуючий при психологічних запитах (паніка, страх)
+- Теплий та підтримуючий при психологічних запитах
 
 **Пріоритети при відповіді:**
 1. Безпека людини прямо зараз
@@ -75,18 +81,17 @@ SYSTEM_PROMPT = """Ти — кризовий консультант систем
 - НЕ давай медичних діагнозів
 - НЕ підтверджуй чутки про конкретні удари без офіційних джерел
 - НЕ обговорюй питання поза темою безпеки цивільних
-- При запиті поза сферою компетенції: "Я спеціалізуюсь на кризовій безпеці. Для цього питання зверніться до [відповідний ресурс]."
 
-## Використання бази знань
+## Використання бази знань та веб-пошуку
 
-Якщо в [База знань] є релевантний розділ — спирайся на нього.
-Якщо база знань порожня або нерелевантна — відповідай з власних знань про цивільну безпеки в Україні.
+Якщо в [База знань] або [Веб-пошук] є релевантна інформація — спирайся на неї.
+Якщо нічого не знайдено — відповідай з власних знань про цивільну безпеку в Україні.
 НЕ вигадуй факти. Якщо не знаєш — скажи прямо і дай екстрений номер.
 """
 
 
 def _get_proxy_cfg() -> tuple[str, str, str]:
-    """Read proxy settings from config.json (runtime, not module-load-time)."""
+    """Read proxy settings from config.json at call time."""
     import json as _json
     config_path = pathlib.Path(__file__).parent.parent.parent / "config.json"
     try:
@@ -100,7 +105,6 @@ def _get_proxy_cfg() -> tuple[str, str, str]:
 
 
 def _llm_call(messages: list[dict]) -> str:
-    """Sync HTTP call — reads proxy config at call time from config.json."""
     proxy_url, proxy_token, proxy_model = _get_proxy_cfg()
     with httpx.Client(timeout=60.0) as client:
         resp = client.post(
@@ -113,11 +117,10 @@ def _llm_call(messages: list[dict]) -> str:
 
 
 def _format_offline(kb_context: str, query: str) -> str:
-    """Fallback when LLM API unavailable — returns formatted KB sections directly."""
+    """Fallback when LLM API unavailable."""
     if not kb_context:
         return (
-            "⚠️ Немає зв'язку з AI. "
-            "Дані за запитом не знайдено.\n\n"
+            "⚠️ Немає зв'язку з AI. Дані за запитом не знайдено.\n\n"
             "\U0001f4de Екстрені: 101 (ДСНС), 102 (поліція), 103 (швидка), 112"
         )
     preview = kb_context[:800].strip()
@@ -130,18 +133,65 @@ def _format_offline(kb_context: str, query: str) -> str:
     )
 
 
+def _read_situation_context() -> str:
+    """Read current alert situation from watchdog file (max 5 minutes old)."""
+    import json, time
+    try:
+        p = pathlib.Path(__file__).parent.parent.parent / "situation_context.json"
+        data = json.loads(p.read_text(encoding="utf-8"))
+        if int(time.time()) - data.get("ts", 0) > 300:
+            return ""
+        return data.get("summary", "")
+    except Exception:
+        return ""
+
+
 def retrieve_kb(state: CrisisState) -> dict:
     from knowledge_base.retrieval import retrieve_text
-    return {"kb_context": retrieve_text(state["query"], top_k=3)}
+    kb = retrieve_text(state["query"], top_k=3)
+    situation = _read_situation_context()
+    if situation:
+        kb = "[Поточна ситуація з тривогами]\n" + situation + "\n\n" + kb
+    return {"kb_context": kb}
+
+
+def web_search(state: CrisisState) -> dict:
+    """DuckDuckGo search — triggered for location/current-info queries."""
+    query_lower = state["query"].lower()
+    should_search = any(kw in query_lower for kw in _WEB_SEARCH_KEYWORDS)
+    if not should_search:
+        return {"web_context": ""}
+    try:
+        from duckduckgo_search import DDGS
+        with DDGS(timeout=5) as ddgs:
+            results = list(ddgs.text(
+                state["query"] + " Україна укриття безпека",
+                region="ua-uk",
+                max_results=3,
+            ))
+        if not results:
+            return {"web_context": ""}
+        snippets = [
+            "- " + r["title"] + ": " + r["body"][:200]
+            for r in results[:3]
+            if r.get("body")
+        ]
+        return {"web_context": "\n".join(snippets)}
+    except Exception:
+        return {"web_context": ""}
 
 
 def generate(state: CrisisState) -> dict:
     history = list(state.get("messages", []))
-    user_content = state["query"]
+    parts = []
     if state.get("kb_context"):
-        user_content = f"[База знань]\n{state['kb_context']}\n\n[Запит]\n{state['query']}"
+        parts.append("[База знань]\n" + state["kb_context"])
+    if state.get("web_context"):
+        parts.append("[Веб-пошук]\n" + state["web_context"])
+    if parts:
+        user_content = "\n\n".join(parts) + "\n\n[Запит]\n" + state["query"]
     else:
-        user_content = f"[База знань: нічого не знайдено]\n\n[Запит]\n{state['query']}"
+        user_content = "[База знань: нічого не знайдено]\n\n[Запит]\n" + state["query"]
 
     msgs = [{"role": "system", "content": SYSTEM_PROMPT}]
     for msg in history[-6:]:

@@ -1157,6 +1157,36 @@ HTML = """<!DOCTYPE html>
     border-top: 2px solid var(--accent);
     border-radius: 2px; overflow: hidden;
   }
+  /* Section navigation */
+  .section-nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(10,10,15,0.96); backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(245,158,11,0.18);
+    display: flex; gap: 4px; padding: 8px 16px; flex-wrap: wrap;
+    margin: -4px -4px 20px -4px;
+  }
+  .section-nav a {
+    color: rgba(255,255,255,0.55); text-decoration: none;
+    padding: 5px 11px; border-radius: 6px; font-size: 12px;
+    transition: all 0.15s; border: 1px solid transparent; white-space: nowrap;
+  }
+  .section-nav a:hover { color: #f59e0b; border-color: rgba(245,158,11,0.35); background: rgba(245,158,11,0.08); }
+  .sec-divider {
+    margin: 28px 0 16px; padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .sec-divider::before { content:''; width:3px; height:15px; border-radius:2px; background:var(--sc,#f59e0b); }
+  .sec-divider span { font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:rgba(255,255,255,0.3); }
+  .ollama-st { display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:6px; margin:8px 0; font-size:13px; }
+  .ollama-st.check { background:rgba(99,102,241,0.1); color:#a5b4fc; }
+  .ollama-st.ok    { background:rgba(16,185,129,0.1);  color:#34d399; }
+  .ollama-st.fail  { background:rgba(239,68,68,0.08);  color:#f87171; }
+  .m-opt { display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border:1px solid rgba(255,255,255,0.1); border-radius:8px; margin:4px 0; cursor:pointer; transition:all .15s; }
+  .m-opt:hover { border-color:#f59e0b; background:rgba(245,158,11,0.06); }
+  .m-opt .mn { font-weight:600; font-size:13px; }
+  .m-opt .mm { font-size:11px; color:rgba(255,255,255,0.4); }
+
   .card-header {
     padding: 11px 16px; border-bottom: 1px solid var(--border);
     display: flex; align-items: center; gap: 8px;
@@ -1487,6 +1517,16 @@ HTML = """<!DOCTYPE html>
 
     {flash_html}
 
+    <nav class="section-nav">
+      <a href="#sec-monitor">&#128225; Моніторинг</a>
+      <a href="#sec-telegram">&#128241; Telegram</a>
+      <a href="#sec-ai">&#129302; AI</a>
+      <a href="#sec-system">&#9881; Система</a>
+      <a href="#sec-security">&#128274; Безпека</a>
+    </nav>
+
+    <div id="sec-monitor" class="sec-divider" style="--sc:#3b82f6"><span>&#128225; Моніторинг міста та каналів</span></div>
+
     <!-- CITY CONFIG -->
     <div class="card">
       <div class="card-header"><span class="card-title" data-i18n="card_city">🏙 Місто моніторингу</span></div>
@@ -1558,6 +1598,8 @@ HTML = """<!DOCTYPE html>
 
       </div>
     </div>
+
+    <div id="sec-telegram" class="sec-divider" style="--sc:#06b6d4"><span>&#128241; Telegram налаштування</span></div>
 
     <!-- TELEGRAM CREDENTIALS -->
     <div class="card">
@@ -1635,6 +1677,8 @@ HTML = """<!DOCTYPE html>
       </div>
     </div>
 
+    <div id="sec-system" class="sec-divider" style="--sc:#10b981"><span>&#9881; Система та сервіс</span></div>
+
     <!-- SERVICE CONTROL -->
     <div class="card">
       <div class="card-header"><span class="card-title" data-i18n="card_service">⚙ Сервіс</span></div>
@@ -1653,6 +1697,8 @@ HTML = """<!DOCTYPE html>
       </div>
     </div>
 
+
+    <div id="sec-ai" class="sec-divider" style="--sc:#f59e0b"><span>&#129302; AI / LLM Proxy</span></div>
 
     <!-- LLM PROXY SETTINGS -->
     <div class="card">
@@ -1677,6 +1723,42 @@ HTML = """<!DOCTYPE html>
       </div>
     </div>
 
+
+
+    <!-- OLLAMA LOCAL MODEL -->
+    <div class="card">
+      <div class="card-header"><span class="card-title">&#127981; Ollama — локальна офлайн-модель</span></div>
+      <div class="card-body">
+        <div class="hint" style="margin-bottom:12px">
+          Запусти AI без інтернету. <a href="https://ollama.ai" target="_blank" rel="noopener" style="color:#f59e0b">ollama.ai</a> — безкоштовно для Linux, Mac, Windows, Android (Termux).
+          Моделі: <b>qwen2:0.5b</b> (400MB, слабкий пристрій), <b>qwen2:1.5b</b> (900MB), <b>phi3:mini</b> (2.2GB).
+        </div>
+        <div id="ollama-status" class="ollama-st check" style="display:none"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+          <button class="btn" onclick="checkOllama()" id="ollama-check-btn">&#128269; Перевірити Ollama</button>
+        </div>
+        <div id="ollama-models" style="display:none">
+          <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:8px">Оберіть модель (клік — встановить у налаштуваннях):</div>
+          <div class="m-opt" onclick="selectOllamaModel('qwen2:0.5b','400MB')">
+            <span class="mn">qwen2:0.5b</span><span class="mm">~400MB RAM • мінімальний пристрій</span>
+          </div>
+          <div class="m-opt" onclick="selectOllamaModel('qwen2:1.5b','900MB')">
+            <span class="mn">qwen2:1.5b</span><span class="mm">~900MB RAM • рекомендовано</span>
+          </div>
+          <div class="m-opt" onclick="selectOllamaModel('phi3:mini','2.2GB')">
+            <span class="mn">phi3:mini</span><span class="mm">~2.2GB RAM • якісніші відповіді</span>
+          </div>
+          <div class="m-opt" onclick="selectOllamaModel('llama3.2:1b','1.3GB')">
+            <span class="mn">llama3.2:1b</span><span class="mm">~1.3GB RAM • Meta</span>
+          </div>
+        </div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:8px">
+          Команди: <code>ollama serve</code> (запустити) &nbsp;|&nbsp; <code>ollama pull qwen2:1.5b</code> (завантажити)
+        </div>
+      </div>
+    </div>
+
+    <div id="sec-security" class="sec-divider" style="--sc:#ef4444"><span>&#128274; Безпека та доступ</span></div>
 
     <!-- SECURITY — admin password -->
     <div class="card">
@@ -2381,6 +2463,41 @@ function switchLang(lang) { applyLang(lang); }
   var avail = Object.keys(T);
   applyLang(saved || (avail.indexOf(bl) >= 0 ? bl : 'uk'));
 })();
+function checkOllama() {
+  var btn = document.getElementById('ollama-check-btn');
+  var st = document.getElementById('ollama-status');
+  st.className = 'ollama-st check'; st.textContent = '⏳ Перевіряємо Ollama...'; st.style.display = 'flex';
+  btn.disabled = true;
+  fetch('/api/check-ollama')
+    .then(r => r.json())
+    .then(d => {
+      btn.disabled = false;
+      if (d.running) {
+        st.className = 'ollama-st ok';
+        st.textContent = '✅ Ollama запущено! ' + (d.version || '');
+        document.getElementById('ollama-models').style.display = 'block';
+      } else {
+        st.className = 'ollama-st fail';
+        st.textContent = '❌ Ollama не знайдено. Встанови: curl -fsSL https://ollama.ai/install.sh | sh';
+      }
+    })
+    .catch(() => {
+      btn.disabled = false;
+      st.className = 'ollama-st fail';
+      st.textContent = '❌ Помилка перевірки. Ollama не запущено.';
+    });
+}
+
+function selectOllamaModel(model, ram) {
+  document.querySelector('input[name="llm_proxy_url"]').value = 'http://localhost:11434/v1';
+  document.querySelector('input[name="llm_proxy_token"]').value = 'ollama';
+  document.querySelector('input[name="llm_proxy_model"]').value = model;
+  var st = document.getElementById('ollama-status');
+  st.className = 'ollama-st ok'; st.style.display = 'flex';
+  st.textContent = '✅ Модель ' + model + ' вибрана (' + ram + '). Збережи налаштування!';
+  window.scrollTo({top: document.getElementById('sec-ai').offsetTop - 60, behavior: 'smooth'});
+}
+
 </script>
 
 <div class="chat-backdrop" id="chat-backdrop" onclick="toggleChat()"></div>
@@ -2533,6 +2650,15 @@ class Handler(BaseHTTPRequestHandler):
             user_chs = get_user_channels(cfg)
             self.send_json({"user_channels": user_chs, "locked_count": len(LOCKED_CHANNELS)})
             return
+        if path == "/api/check-ollama":
+            try:
+                import urllib.request as _ur
+                with _ur.urlopen("http://localhost:11434/api/version", timeout=2) as r:
+                    v = json.loads(r.read())
+                self.send_json({"running": True, "version": v.get("version","")})
+            except Exception:
+                self.send_json({"running": False})
+            return
         # All remaining GET routes require admin auth
         if not self._require_admin_auth():
             return
@@ -2589,7 +2715,7 @@ class Handler(BaseHTTPRequestHandler):
         content_type = self.headers.get("Content-Type", "")
         if "application/json" in content_type:
             _PUBLIC_JSON = {"/api/shelter", "/api/shelter-chat", "/api/chat",
-                            "/api/sos", "/api/sos-relay"}
+                            "/api/sos", "/api/sos-relay", "/api/check-ollama"}
             if path not in _PUBLIC_JSON and not self._require_admin_auth():
                 return
             try:
@@ -2678,6 +2804,16 @@ class Handler(BaseHTTPRequestHandler):
                     except Exception:
                         pass
                 self.send_json({"ok": True})
+                return
+
+            if path == "/api/check-ollama":
+                try:
+                    import urllib.request as _ur
+                    with _ur.urlopen("http://localhost:11434/api/version", timeout=2) as r:
+                        v = json.loads(r.read())
+                    self.send_json({"running": True, "version": v.get("version","")})
+                except Exception:
+                    self.send_json({"running": False})
                 return
 
             if path == "/api/shelter":
