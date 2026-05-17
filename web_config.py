@@ -110,8 +110,10 @@ def load_config():
 
 
 def save_config(cfg: dict):
-    with open(CONFIG_PATH, "w") as f:
+    tmp = CONFIG_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(cfg, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, CONFIG_PATH)
 
 
 def load_env() -> dict:
@@ -188,10 +190,18 @@ import string as _string
 import random as _random
 
 CLOUDFLARED_DIR = os.path.join(os.path.dirname(__file__), ".cloudflared")
-CF_TUNNEL_ID    = "c0413dca-1f1d-4176-be39-23e2c8f0754f"
+_CF_TUNNEL_ID_FALLBACK = "c0413dca-1f1d-4176-be39-23e2c8f0754f"
 CF_DOMAIN       = "exodus.pp.ua"
 CF_SUFFIX       = "-alert"
 CF_TUNNEL_CFG   = "/tmp/uav-watcher-tunnel.yml"
+
+
+def _cf_tunnel_id() -> str:
+    """Read tunnel ID from config.json; fall back to hardcoded default."""
+    try:
+        return load_config().get("cf_tunnel_id") or _CF_TUNNEL_ID_FALLBACK
+    except Exception:
+        return _CF_TUNNEL_ID_FALLBACK
 
 
 def cloudflared_ok():
@@ -200,7 +210,7 @@ def cloudflared_ok():
         return False
     if not os.path.isdir(CLOUDFLARED_DIR):
         return False
-    creds = os.path.join(CLOUDFLARED_DIR, f"{CF_TUNNEL_ID}.json")
+    creds = os.path.join(CLOUDFLARED_DIR, f"{_cf_tunnel_id()}.json")
     cert  = os.path.join(CLOUDFLARED_DIR, "cert.pem")
     return os.path.isfile(creds) and os.path.isfile(cert)
 
@@ -238,7 +248,7 @@ def tunnel_route_dns(prefix):
     result   = subprocess.run(
         ["cloudflared", "tunnel",
          "--origincert", cert, "--config", "/dev/null",
-         "route", "dns", CF_TUNNEL_ID, hostname],
+         "route", "dns", _cf_tunnel_id(), hostname],
         capture_output=True, text=True, timeout=30
     )
     ok  = result.returncode == 0 or "Added CNAME" in (result.stdout + result.stderr)
@@ -247,11 +257,11 @@ def tunnel_route_dns(prefix):
 
 
 def tunnel_write_config(prefix):
-    creds = os.path.join(CLOUDFLARED_DIR, f"{CF_TUNNEL_ID}.json")
+    creds = os.path.join(CLOUDFLARED_DIR, f"{_cf_tunnel_id()}.json")
     cert  = os.path.join(CLOUDFLARED_DIR, "cert.pem")
     hostname = f"{prefix}{CF_SUFFIX}.{CF_DOMAIN}"
     cfg_text = (
-        f"tunnel: {CF_TUNNEL_ID}\n"
+        f"tunnel: {_cf_tunnel_id()}\n"
         f"credentials-file: {creds}\n"
         f"origincertpath: {cert}\n"
         "protocol: quic\n"
