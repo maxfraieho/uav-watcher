@@ -98,6 +98,123 @@ def restart_service():
         return False, str(e)
 
 
+# ── Cloudflare Tunnel ─────────────────────────────────────────────────────────
+import signal
+import socket as _socket
+import string as _string
+import random as _random
+
+CLOUDFLARED_DIR = os.path.join(os.path.dirname(__file__), ".cloudflared")
+CF_TUNNEL_ID    = "c0413dca-1f1d-4176-be39-23e2c8f0754f"
+CF_DOMAIN       = "exodus.pp.ua"
+CF_SUFFIX       = "-alert"
+CF_TUNNEL_CFG   = "/tmp/uav-watcher-tunnel.yml"
+
+
+def cloudflared_ok():
+    import shutil
+    if not shutil.which("cloudflared"):
+        return False
+    if not os.path.isdir(CLOUDFLARED_DIR):
+        return False
+    creds = os.path.join(CLOUDFLARED_DIR, f"{CF_TUNNEL_ID}.json")
+    cert  = os.path.join(CLOUDFLARED_DIR, "cert.pem")
+    return os.path.isfile(creds) and os.path.isfile(cert)
+
+
+def tunnel_running():
+    cfg = load_config()
+    pid = cfg.get("tunnel_pid")
+    if not pid:
+        return False, None
+    try:
+        os.kill(int(pid), 0)
+        return True, int(pid)
+    except (ProcessLookupError, PermissionError, ValueError):
+        return False, None
+
+
+def tunnel_prefix_available(prefix):
+    # Wildcard DNS makes getaddrinfo useless; check our own stored URL instead
+    cfg = load_config()
+    current_url = cfg.get("tunnel_url", "")
+    expected = f"{prefix}{CF_SUFFIX}.{CF_DOMAIN}"
+    if expected in current_url:
+        running, _ = tunnel_running()
+        return not running   # same prefix but not running → available
+    return True
+
+
+def tunnel_route_dns(prefix):
+    hostname = f"{prefix}{CF_SUFFIX}.{CF_DOMAIN}"
+    cert     = os.path.join(CLOUDFLARED_DIR, "cert.pem")
+    result   = subprocess.run(
+        ["cloudflared", "tunnel",
+         "--origincert", cert, "--config", "/dev/null",
+         "route", "dns", CF_TUNNEL_ID, hostname],
+        capture_output=True, text=True, timeout=30
+    )
+    ok  = result.returncode == 0 or "Added CNAME" in (result.stdout + result.stderr)
+    msg = (result.stdout + result.stderr).strip()
+    return ok, msg
+
+
+def tunnel_write_config(prefix):
+    creds = os.path.join(CLOUDFLARED_DIR, f"{CF_TUNNEL_ID}.json")
+    cert  = os.path.join(CLOUDFLARED_DIR, "cert.pem")
+    hostname = f"{prefix}{CF_SUFFIX}.{CF_DOMAIN}"
+    cfg_text = (
+        f"tunnel: {CF_TUNNEL_ID}\n"
+        f"credentials-file: {creds}\n"
+        f"origincertpath: {cert}\n"
+        "protocol: quic\n"
+        "loglevel: warn\n"
+        "no-autoupdate: true\n"
+        "ingress:\n"
+        f"  - hostname: {hostname}\n"
+        f"    service: http://localhost:{PORT}\n"
+        "  - service: http_status:404\n"
+    )
+    with open(CF_TUNNEL_CFG, "w") as f:
+        f.write(cfg_text)
+
+
+def tunnel_start(prefix):
+    tunnel_write_config(prefix)
+    proc = subprocess.Popen(
+        ["cloudflared", "tunnel", "--config", CF_TUNNEL_CFG, "run"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    url = f"https://{prefix}{CF_SUFFIX}.{CF_DOMAIN}"
+    cfg = load_config()
+    cfg["tunnel_pid"]    = proc.pid
+    cfg["tunnel_prefix"] = prefix
+    cfg["tunnel_url"]    = url
+    save_config(cfg)
+    return proc.pid, url
+
+
+def tunnel_stop():
+    cfg = load_config()
+    pid = cfg.get("tunnel_pid")
+    if pid:
+        try:
+            os.kill(int(pid), signal.SIGTERM)
+        except Exception:
+            pass
+    cfg["tunnel_pid"] = None
+    save_config(cfg)
+    try:
+        os.remove(CF_TUNNEL_CFG)
+    except FileNotFoundError:
+        pass
+
+
+def cf_random_prefix(n=5):
+    return "".join(_random.choices(_string.ascii_lowercase, k=n))
+
+
 HTML = """<!DOCTYPE html>
 <html lang="uk" dir="ltr">
 <head>
@@ -106,6 +223,7 @@ HTML = """<!DOCTYPE html>
 <title>UAV Watcher — Налаштування</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -483,6 +601,50 @@ HTML = """<!DOCTYPE html>
       </div>
     </div>
 
+    <!-- TUNNEL / PUBLIC SHARE -->
+    <div class="card">
+      <div class="card-header"><span class="card-title" data-i18n="card_tunnel">🔗 Публічний доступ</span></div>
+      <div class="card-body">
+
+        <div id="tun-unavail" style="display:none">
+          <div class="hint" data-i18n="hint_tunnel_unavail">cloudflared не встановлено або облікові дані відсутні у папці <code>.cloudflared/</code>.</div>
+        </div>
+
+        <div id="tun-stopped">
+          <div class="hint" style="margin-bottom:10px;line-height:1.7" data-i18n="hint_tunnel">Поділись посиланням з родиною — вони отримають сповіщення через ваш сервіс.</div>
+          <div>
+            <label data-i18n="lbl_prefix">Префікс URL</label>
+            <div style="display:flex;gap:6px;margin-bottom:6px">
+              <input type="text" id="tun-prefix" placeholder="kyiv" maxlength="20" oninput="tunUpdatePreview()"
+                style="flex:1;padding:7px 10px;background:var(--elevated);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;transition:border-color .15s"
+                onfocus="this.style.borderColor='var(--border2)'" onblur="this.style.borderColor='var(--border)'">
+              <button class="btn btn-ghost" style="height:34px;font-size:18px;padding:0 10px" onclick="tunGenPrefix()" title="Згенерувати">⚂</button>
+            </div>
+          </div>
+          <div class="hint" style="margin-bottom:8px">URL: <code id="tun-preview" style="color:var(--amber)">?????-alert.exodus.pp.ua</code></div>
+          <div id="tun-check-res" style="display:none;margin-bottom:8px"></div>
+          <div class="btn-row" style="margin-bottom:4px">
+            <button class="btn btn-primary" style="height:30px;font-size:10px" onclick="tunStart()" id="tun-start-btn" data-i18n="btn_tunnel_start">Запустити тунель</button>
+            <button class="btn btn-ghost" style="height:30px;font-size:10px" onclick="tunCheck()" data-i18n="btn_prefix_check">Перевірити</button>
+          </div>
+          <div id="tun-start-err" style="display:none;margin-top:6px"></div>
+        </div>
+
+        <div id="tun-active" style="display:none">
+          <div class="hint" style="margin-bottom:8px">🟢 <span data-i18n="tunnel_active">Тунель активний</span></div>
+          <div style="text-align:center;margin-bottom:10px">
+            <div id="tun-qr" style="display:inline-block;background:#fff;padding:8px;border-radius:4px"></div>
+          </div>
+          <div style="text-align:center;margin-bottom:10px;word-break:break-all">
+            <a id="tun-url-link" href="#" target="_blank" style="font-family:var(--mono);font-size:10px;color:var(--amber);text-decoration:none" id="tun-url-display"></a>
+          </div>
+          <button class="btn btn-danger" style="height:30px;font-size:10px;width:100%" onclick="tunStop()" data-i18n="btn_tunnel_stop">Зупинити тунель</button>
+        </div>
+
+      </div>
+    </div>
+
+
   </div>
 </div>
 <script>
@@ -600,6 +762,97 @@ async function sendTest() {
   btn.textContent = (T[currentLang] || T['uk']).btn_test;
 }
 
+// ── Tunnel management ─────────────────────────────────────────────────────────
+function tunUpdatePreview() {
+  const v = (document.getElementById('tun-prefix').value.trim().toLowerCase() || '?????');
+  document.getElementById('tun-preview').textContent = v + '-alert.exodus.pp.ua';
+}
+function tunGenPrefix() {
+  const p = Array.from({length:5}, () => 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random()*26)]).join('');
+  document.getElementById('tun-prefix').value = p;
+  tunUpdatePreview();
+  document.getElementById('tun-check-res').style.display = 'none';
+}
+function _tunShowCheck(ok, msg) {
+  const el = document.getElementById('tun-check-res');
+  el.style.display = 'block';
+  el.className = ok ? 'test-ok' : 'test-err';
+  el.textContent = msg;
+}
+async function tunCheck() {
+  const prefix = document.getElementById('tun-prefix').value.trim().toLowerCase();
+  if (!prefix || !/^[a-z0-9-]{2,20}$/.test(prefix)) {
+    _tunShowCheck(false, 'Тільки латинські літери, цифри і дефіс (2-20 символів)');
+    return false;
+  }
+  _tunShowCheck(true, '...');
+  try {
+    const r = await fetch('/tunnel-check', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({prefix})});
+    const d = await r.json();
+    if (!d.ok) { _tunShowCheck(false, d.error || 'Помилка'); return false; }
+    if (d.conflict) { _tunShowCheck(false, d.hostname + ' — вже зайнято'); return false; }
+    _tunShowCheck(true, d.hostname + ' — доступно ✓');
+    return true;
+  } catch(e) { _tunShowCheck(false, 'Помилка з\'єднання'); return false; }
+}
+async function tunStart() {
+  const prefix = document.getElementById('tun-prefix').value.trim().toLowerCase();
+  if (!prefix) { tunGenPrefix(); return; }
+  const btn = document.getElementById('tun-start-btn');
+  const errEl = document.getElementById('tun-start-err');
+  btn.disabled = true; btn.textContent = '...'; errEl.style.display = 'none';
+  try {
+    const r = await fetch('/tunnel-start', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({prefix})});
+    const d = await r.json();
+    if (d.ok) {
+      setTimeout(tunLoadStatus, 3000);
+    } else {
+      errEl.style.display = 'block'; errEl.className = 'test-err'; errEl.textContent = d.error;
+      btn.disabled = false;
+      btn.textContent = (T[currentLang]||T['uk']).btn_tunnel_start;
+    }
+  } catch(e) {
+    errEl.style.display = 'block'; errEl.className = 'test-err';
+    errEl.textContent = (T[currentLang]||T['uk']).err_connection;
+    btn.disabled = false;
+    btn.textContent = (T[currentLang]||T['uk']).btn_tunnel_start;
+  }
+}
+async function tunStop() {
+  await fetch('/tunnel-stop', {method:'POST'});
+  tunLoadStatus();
+}
+async function tunLoadStatus() {
+  try {
+    const r = await fetch('/api/tunnel');
+    const d = await r.json();
+    const unavail = document.getElementById('tun-unavail');
+    const stopped = document.getElementById('tun-stopped');
+    const active  = document.getElementById('tun-active');
+    if (!d.available) {
+      unavail.style.display='block'; stopped.style.display='none'; active.style.display='none'; return;
+    }
+    unavail.style.display='none';
+    if (d.running && d.url) {
+      stopped.style.display='none'; active.style.display='block';
+      const link = document.getElementById('tun-url-link');
+      link.textContent = d.url; link.href = d.url;
+      const qrEl = document.getElementById('tun-qr');
+      qrEl.innerHTML = '';
+      if (typeof QRCode !== 'undefined') {
+        new QRCode(qrEl, {text: d.url, width: 160, height: 160, colorDark:'#000000', colorLight:'#ffffff'});
+      }
+    } else {
+      active.style.display='none'; stopped.style.display='block';
+      if (d.prefix) { document.getElementById('tun-prefix').value = d.prefix; tunUpdatePreview(); }
+      const btn = document.getElementById('tun-start-btn');
+      btn.disabled = false;
+      btn.textContent = (T[currentLang]||T['uk']).btn_tunnel_start;
+    }
+  } catch(e) { console.error('tunLoadStatus', e); }
+}
+tunLoadStatus();
+
 // ── i18n ─────────────────────────────────────────────────────────────────────
 const T = {
   uk: {
@@ -623,6 +876,14 @@ const T = {
     step_botfather_toggle: `Як створити бота через BotFather`,
     cur_state: `Поточний стан:`, ch_placeholder: `@username або -1001234567890`,
     err_connection: `Помилка з'єднання`,
+    card_tunnel: `🔗 Публічний доступ`,
+    hint_tunnel: `Поділись посиланням з родиною — вони отримають сповіщення через ваш сервіс.`,
+    hint_tunnel_unavail: `cloudflared не встановлено або облікові дані відсутні.`,
+    lbl_prefix: `Префікс URL`,
+    btn_tunnel_start: `Запустити тунель`,
+    btn_tunnel_stop: `Зупинити тунель`,
+    btn_prefix_check: `Перевірити`,
+    tunnel_active: `Тунель активний`,
   },
   en: {
     title: `UAV WATCHER`, subtitle: `— UAV threat monitoring system`,
@@ -645,6 +906,14 @@ const T = {
     step_botfather_toggle: `How to create a bot via BotFather`,
     cur_state: `Current state:`, ch_placeholder: `@username or -1001234567890`,
     err_connection: `Connection error`,
+    card_tunnel: `🔗 Public access`,
+    hint_tunnel: `Share the link with your family — they'll get alerts through your service.`,
+    hint_tunnel_unavail: `cloudflared is not installed or credentials are missing.`,
+    lbl_prefix: `URL prefix`,
+    btn_tunnel_start: `Start tunnel`,
+    btn_tunnel_stop: `Stop tunnel`,
+    btn_prefix_check: `Check`,
+    tunnel_active: `Tunnel active`,
   },
   de: {
     title: `UAV WATCHER`, subtitle: `— UAV-Bedrohungsüberwachungssystem`,
@@ -667,6 +936,14 @@ const T = {
     step_botfather_toggle: `So erstellt man einen Bot via BotFather`,
     cur_state: `Aktueller Status:`, ch_placeholder: `@username oder -1001234567890`,
     err_connection: `Verbindungsfehler`,
+    card_tunnel: `🔗 Öffentlicher Zugang`,
+    hint_tunnel: `Teile den Link mit deiner Familie — sie erhalten Benachrichtigungen über deinen Dienst.`,
+    hint_tunnel_unavail: `cloudflared nicht installiert oder Anmeldedaten fehlen.`,
+    lbl_prefix: `URL-Präfix`,
+    btn_tunnel_start: `Tunnel starten`,
+    btn_tunnel_stop: `Tunnel stoppen`,
+    btn_prefix_check: `Prüfen`,
+    tunnel_active: `Tunnel aktiv`,
   },
   fr: {
     title: `UAV WATCHER`, subtitle: `— système de surveillance des menaces UAV`,
@@ -689,6 +966,14 @@ const T = {
     step_botfather_toggle: `Comment créer un bot via BotFather`,
     cur_state: `État actuel :`, ch_placeholder: `@username ou -1001234567890`,
     err_connection: `Erreur de connexion`,
+    card_tunnel: `🔗 Accès public`,
+    hint_tunnel: `Partagez le lien avec votre famille — ils recevront des alertes via votre service.`,
+    hint_tunnel_unavail: `cloudflared non installé ou identifiants manquants.`,
+    lbl_prefix: `Préfixe URL`,
+    btn_tunnel_start: `Démarrer le tunnel`,
+    btn_tunnel_stop: `Arrêter le tunnel`,
+    btn_prefix_check: `Vérifier`,
+    tunnel_active: `Tunnel actif`,
   },
   pl: {
     title: `UAV WATCHER`, subtitle: `— system monitorowania zagrożeń UAV`,
@@ -711,6 +996,14 @@ const T = {
     step_botfather_toggle: `Jak utworzyć bota przez BotFather`,
     cur_state: `Aktualny stan:`, ch_placeholder: `@username lub -1001234567890`,
     err_connection: `Błąd połączenia`,
+    card_tunnel: `🔗 Dostęp publiczny`,
+    hint_tunnel: `Udostępnij link rodzinie — otrzymają powiadomienia przez Twój serwis.`,
+    hint_tunnel_unavail: `cloudflared nie jest zainstalowany lub brakuje danych.`,
+    lbl_prefix: `Prefiks URL`,
+    btn_tunnel_start: `Uruchom tunel`,
+    btn_tunnel_stop: `Zatrzymaj tunel`,
+    btn_prefix_check: `Sprawdź`,
+    tunnel_active: `Tunel aktywny`,
   },
   es: {
     title: `UAV WATCHER`, subtitle: `— sistema de monitoreo de amenazas UAV`,
@@ -733,6 +1026,14 @@ const T = {
     step_botfather_toggle: `Cómo crear un bot a través de BotFather`,
     cur_state: `Estado actual:`, ch_placeholder: `@username o -1001234567890`,
     err_connection: `Error de conexión`,
+    card_tunnel: `🔗 Acceso público`,
+    hint_tunnel: `Comparte el enlace con tu familia — recibirán alertas a través de tu servicio.`,
+    hint_tunnel_unavail: `cloudflared no está instalado o faltan credenciales.`,
+    lbl_prefix: `Prefijo URL`,
+    btn_tunnel_start: `Iniciar túnel`,
+    btn_tunnel_stop: `Detener túnel`,
+    btn_prefix_check: `Verificar`,
+    tunnel_active: `Túnel activo`,
   },
   tr: {
     title: `UAV WATCHER`, subtitle: `— İHA tehdit izleme sistemi`,
@@ -755,6 +1056,14 @@ const T = {
     step_botfather_toggle: `BotFather aracılığıyla nasıl bot oluşturulur`,
     cur_state: `Mevcut durum:`, ch_placeholder: `@username veya -1001234567890`,
     err_connection: `Bağlantı hatası`,
+    card_tunnel: `🔗 Genel erişim`,
+    hint_tunnel: `Bağlantıyı ailenle paylaş — servisin üzerinden uyarı alacaklar.`,
+    hint_tunnel_unavail: `cloudflared yüklü değil veya kimlik bilgileri eksik.`,
+    lbl_prefix: `URL öneki`,
+    btn_tunnel_start: `Tüneli başlat`,
+    btn_tunnel_stop: `Tüneli durdur`,
+    btn_prefix_check: `Kontrol et`,
+    tunnel_active: `Tünel aktif`,
   },
   ar: {
     title: `UAV WATCHER`, subtitle: `— نظام مراقبة تهديدات الطائرات بدون طيار`,
@@ -777,6 +1086,14 @@ const T = {
     step_botfather_toggle: `كيفية إنشاء روبوت عبر BotFather`,
     cur_state: `الحالة الحالية:`, ch_placeholder: `@username أو -1001234567890`,
     err_connection: `خطأ في الاتصال`,
+    card_tunnel: `🔗 الوصول العام`,
+    hint_tunnel: `شارك الرابط مع عائلتك — سيتلقون التنبيهات عبر خدمتك.`,
+    hint_tunnel_unavail: `cloudflared غير مثبت أو بيانات الاعتماد مفقودة.`,
+    lbl_prefix: `بادئة URL`,
+    btn_tunnel_start: `تشغيل النفق`,
+    btn_tunnel_stop: `إيقاف النفق`,
+    btn_prefix_check: `تحقق`,
+    tunnel_active: `النفق نشط`,
   },
   fa: {
     title: `UAV WATCHER`, subtitle: `— سیستم پایش تهدیدات پهپادی`,
@@ -799,6 +1116,14 @@ const T = {
     step_botfather_toggle: `چگونه یک ربات از طریق BotFather بسازیم`,
     cur_state: `وضعیت فعلی:`, ch_placeholder: `@username یا -1001234567890`,
     err_connection: `خطای اتصال`,
+    card_tunnel: `🔗 دسترسی عمومی`,
+    hint_tunnel: `پیوند را با خانواده‌ات به اشتراک بگذار — از طریق سرویس شما هشدار دریافت می‌کنند.`,
+    hint_tunnel_unavail: `cloudflared نصب نشده یا اطلاعات ورود موجود نیست.`,
+    lbl_prefix: `پیشوند URL`,
+    btn_tunnel_start: `شروع تونل`,
+    btn_tunnel_stop: `توقف تونل`,
+    btn_prefix_check: `بررسی`,
+    tunnel_active: `تونل فعال`,
   },
 };
 
@@ -925,6 +1250,17 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed = urlparse(self.path)
         path = parsed.path
+        if path == "/api/tunnel":
+            running, pid = tunnel_running()
+            cfg = load_config()
+            self.send_json({
+                "available": cloudflared_ok(),
+                "running": running,
+                "pid": pid,
+                "url": cfg.get("tunnel_url", ""),
+                "prefix": cfg.get("tunnel_prefix", ""),
+            })
+            return
         if path == "/api/channels":
             cfg = load_config()
             user_chs = get_user_channels(cfg)
@@ -992,6 +1328,39 @@ class Handler(BaseHTTPRequestHandler):
                 meta = cfg.setdefault("channels_meta", {})
                 meta[str(ch_id)] = {"title": title, "username": username}
                 save_config(cfg)
+                self.send_json({"ok": True})
+                return
+
+            if path == "/tunnel-check":
+                import re as _re2
+                prefix = payload.get("prefix", "").strip().lower()
+                if not _re2.match(r'^[a-z0-9\-]{2,20}$', prefix):
+                    self.send_json({"ok": False, "error": "Невірний формат: тільки a-z, 0-9, дефіс, 2-20 символів"})
+                    return
+                conflict = not tunnel_prefix_available(prefix)
+                self.send_json({"ok": True, "conflict": conflict,
+                                "hostname": f"{prefix}{CF_SUFFIX}.{CF_DOMAIN}"})
+                return
+
+            if path == "/tunnel-start":
+                import re as _re3
+                prefix = payload.get("prefix", "").strip().lower()
+                if not _re3.match(r'^[a-z0-9\-]{2,20}$', prefix):
+                    self.send_json({"ok": False, "error": "Невірний формат префіксу"})
+                    return
+                if not cloudflared_ok():
+                    self.send_json({"ok": False, "error": "cloudflared не налаштовано"})
+                    return
+                ok_dns, dns_msg = tunnel_route_dns(prefix)
+                if not ok_dns:
+                    self.send_json({"ok": False, "error": f"DNS помилка: {dns_msg[:100]}"})
+                    return
+                pid, url = tunnel_start(prefix)
+                self.send_json({"ok": True, "url": url, "pid": pid})
+                return
+
+            if path == "/tunnel-stop":
+                tunnel_stop()
                 self.send_json({"ok": True})
                 return
 
