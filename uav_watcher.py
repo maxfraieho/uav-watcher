@@ -116,12 +116,20 @@ async def main():
         os.environ["TELEGRAM_API_HASH"],
     )
 
+    # Region keywords: alert even without specific city name
+    region = cfg.get("city_region", "Кіровоградська")
+    region_keywords = cfg.get("region_keywords", [region[:12]])
+    region_pattern = re.compile(
+        "|".join(re.escape(k) for k in (keywords + region_keywords)),
+        re.IGNORECASE
+    )
+
     @client.on(events.NewMessage(chats=channels))
     async def handler(event):
         text = event.message.text or ""
         if not text:
             return
-        if not city_pattern.search(text):
+        if not region_pattern.search(text):
             return
         log.info(f"Keyword matched, AI check: {text[:100]}...")
         is_threat, reason = await ai_classify(text, cfg)
@@ -132,6 +140,18 @@ async def main():
             log.info(f"No threat: {reason}")
 
     await client.start(phone=os.environ["TELEGRAM_PHONE"])
+
+    # Join all monitored channels so Telegram delivers updates to this account
+    from telethon.tl.functions.channels import JoinChannelRequest
+    for ch_id in channels:
+        try:
+            entity = await client.get_entity(ch_id)
+            if hasattr(entity, 'username') and entity.username:
+                await client(JoinChannelRequest(entity))
+                log.info(f"Joined channel: {getattr(entity, 'title', ch_id)}")
+        except Exception as e:
+            log.warning(f"Could not join {ch_id}: {e}")
+
     log.info(f"UAV watcher started. Watching {len(channels)} channel(s). Press Ctrl+C to stop.")
     await client.run_until_disconnected()
 
