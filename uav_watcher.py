@@ -31,11 +31,17 @@ def load_config():
 
 def build_ai_prompt(text: str, city: str, region: str) -> str:
     return (
-        f"Ти система моніторингу БПЛА. Визнач: чи це повідомлення містить "
-        f"загрозу БПЛА (безпілотного літального апарату) або ракетну загрозу "
-        f"саме для міста {city} ({region})? "
-        f"Відповідь ТІЛЬКИ JSON без markdown: "
-        f'{"{"}"threat": true/false, "reason": "коротко в 5-10 слів"{"}"}\n\n'
+        "Ти класифікатор повідомлень про повітряні загрози.\n"
+        f"Місто: {city} ({region}).\n"
+        "\n"
+        "Правила:\n"
+        "- threat=true: АКТИВНА загроза БПЛА або ракетна атака прямо зараз\n"
+        "- threat=false: відбій тривоги, кінець тривоги, зняття тривоги\n"
+        "- ВАЖЛИВО: слова 'відбій', 'відбій тривоги' = threat=false\n"
+        "\n"
+        "Відповідь ТІЛЬКИ JSON без markdown:\n"
+        '{"threat": true, "reason": "БПЛА атака підтверджена"}\n'
+        "\n"
         f"Повідомлення:\n{text}"
     )
 
@@ -116,9 +122,18 @@ async def main():
         os.environ["TELEGRAM_API_HASH"],
     )
 
-    # Region keywords: alert even without specific city name
-    region = cfg.get("city_region", "Кіровоградська")
-    region_keywords = cfg.get("region_keywords", [region[:12]])
+    # Auto-derive region keyword from city_region adjective suffix
+    # "Харківська область" -> "Харків"; "Донецька" -> "Донецьк"
+    city_region = cfg.get("city_region", "")
+    region_word = city_region.split()[0] if city_region else ""
+    if region_word.endswith("ська"):
+        region_word = region_word[:-4]
+    elif region_word.endswith("зька"):
+        region_word = region_word[:-4]
+    elif region_word.endswith("ька"):
+        region_word = region_word[:-1]
+    default_region_kw = [region_word] if region_word else []
+    region_keywords = cfg.get("region_keywords", default_region_kw)
     region_pattern = re.compile(
         "|".join(re.escape(k) for k in (keywords + region_keywords)),
         re.IGNORECASE
