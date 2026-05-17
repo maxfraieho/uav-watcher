@@ -178,20 +178,134 @@ warn "Після додавання каналів запусти: cd ~/uav-watc
 # ── 8. Скрипт запуску ────────────────────────────────────────────────────────
 cat > "$INSTALL_DIR/start.sh" <<'STARTSCRIPT'
 #!/bin/bash
-# Запуск UAV Watcher в Termux з wake lock
+# UAV Watcher — запуск watcher + web config UI
 cd "$(dirname "$0")"
+PYTHON=$(command -v python3 || command -v python)
 
 if command -v termux-wake-lock &>/dev/null; then
     termux-wake-lock
     echo "[UAV] Wake lock активовано"
 fi
 
+"$PYTHON" web_config.py &
+WEB_PID=$!
+echo "[UAV] Web Config UI: http://localhost:8422 (PID $WEB_PID)"
+
 echo "[UAV] Запуск UAV Watcher..."
-python uav_watcher.py 2>/dev/null || python3 uav_watcher.py
+"$PYTHON" uav_watcher.py
+
+kill $WEB_PID 2>/dev/null
 STARTSCRIPT
 chmod +x "$INSTALL_DIR/start.sh"
 
-# ── 9. Результат ─────────────────────────────────────────────────────────────
+# ── 9. Автозапуск ────────────────────────────────────────────────────────────
+info "Налаштування автозапуску..."
+AUTOSTART_TYPE="невідомо"
+
+setup_autostart() {
+    # Termux (Android)
+    if [ -d "$HOME/.termux" ] || command -v termux-info &>/dev/null; then
+        if [ -d "$HOME/.termux/boot" ] || mkdir -p "$HOME/.termux/boot" 2>/dev/null; then
+            cp "$INSTALL_DIR/start.sh" "$HOME/.termux/boot/uav-watcher.sh"
+            chmod +x "$HOME/.termux/boot/uav-watcher.sh"
+            AUTOSTART_TYPE="Termux:Boot (~/.termux/boot/)"
+            success "Termux:Boot налаштовано — переконайся що Termux:Boot встановлено з F-Droid"
+            return 0
+        fi
+    fi
+
+    # systemd (Linux з systemd --user)
+    if command -v systemctl &>/dev/null && systemctl --user daemon-reload &>/dev/null 2>&1; then
+        SDIR="$HOME/.config/systemd/user"
+        mkdir -p "$SDIR"
+        PYTHON=$(command -v python3 || command -v python)
+        cat > "$SDIR/uav-watcher.service" <<EOF
+[Unit]
+Description=UAV Watcher
+After=network.target
+
+[Service]
+WorkingDirectory=$INSTALL_DIR
+ExecStart=$PYTHON $INSTALL_DIR/uav_watcher.py
+Restart=always
+
+[Install]
+WantedBy=default.target
+EOF
+        cat > "$SDIR/uav-web-config.service" <<EOF
+[Unit]
+Description=UAV Web Config UI
+After=network.target
+
+[Service]
+WorkingDirectory=$INSTALL_DIR
+ExecStart=$PYTHON $INSTALL_DIR/web_config.py
+Restart=always
+
+[Install]
+WantedBy=default.target
+EOF
+        systemctl --user daemon-reload
+        systemctl --user enable uav-watcher.service uav-web-config.service 2>/dev/null
+        AUTOSTART_TYPE="systemd --user"
+        success "systemd user-сервіси зареєстровано"
+        return 0
+    fi
+
+    # OpenRC (Alpine Linux та ін.)
+    if command -v rc-update &>/dev/null && command -v sudo &>/dev/null; then
+        PYTHON=$(command -v python3 || command -v python)
+        sudo tee /etc/init.d/uav-watcher > /dev/null <<EOF
+#!/sbin/openrc-run
+name="uav-watcher"
+description="UAV Alert Watcher"
+command="$PYTHON"
+command_args="$INSTALL_DIR/uav_watcher.py"
+command_user="$USER"
+command_background=true
+pidfile="/run/uav-watcher.pid"
+output_log="$INSTALL_DIR/uav-watcher.log"
+directory="$INSTALL_DIR"
+depend() { need net; }
+EOF
+        sudo tee /etc/init.d/uav-web-config > /dev/null <<EOF
+#!/sbin/openrc-run
+name="uav-web-config"
+description="UAV Web Config UI"
+command="$PYTHON"
+command_args="$INSTALL_DIR/web_config.py"
+command_user="$USER"
+command_background=true
+pidfile="/run/uav-web-config.pid"
+output_log="$INSTALL_DIR/web-config.log"
+directory="$INSTALL_DIR"
+depend() { need net; }
+EOF
+        sudo chmod +x /etc/init.d/uav-watcher /etc/init.d/uav-web-config
+        sudo touch "$INSTALL_DIR/uav-watcher.log" "$INSTALL_DIR/web-config.log"
+        sudo chown "$USER" "$INSTALL_DIR/uav-watcher.log" "$INSTALL_DIR/web-config.log"
+        sudo rc-update add uav-watcher default 2>/dev/null
+        sudo rc-update add uav-web-config default 2>/dev/null
+        AUTOSTART_TYPE="OpenRC (/etc/init.d/)"
+        success "OpenRC сервіси зареєстровано"
+        return 0
+    fi
+
+    # cron @reboot (universal fallback)
+    if command -v crontab &>/dev/null; then
+        (crontab -l 2>/dev/null | grep -v "uav-watcher"; echo "@reboot bash $INSTALL_DIR/start.sh >> $INSTALL_DIR/uav-watcher.log 2>&1") | crontab -
+        AUTOSTART_TYPE="cron @reboot"
+        success "Cron @reboot налаштовано"
+        return 0
+    fi
+
+    warn "Автозапуск не налаштовано — запускай вручну: bash $INSTALL_DIR/start.sh"
+    AUTOSTART_TYPE="ручний запуск"
+}
+
+setup_autostart
+
+# ── 10. Результат ────────────────────────────────────────────────────────────
 echo ""
 echo -e "${GREEN}${BOLD}══════════════════════════════════════${NC}"
 echo -e "${GREEN}${BOLD}  Встановлення завершено!${NC}"
@@ -200,13 +314,11 @@ echo ""
 echo "  Папка:        $INSTALL_DIR"
 echo "  Конфіг:       $INSTALL_DIR/config.json"
 echo "  Секрети:      $INSTALL_DIR/.env"
+echo "  Автозапуск:   $AUTOSTART_TYPE"
 echo ""
 echo -e "${BOLD}  Наступні кроки:${NC}"
-echo "  1. Додай ID каналів у config.json"
-echo "  2. Запусти: cd ~/uav-watcher && bash start.sh"
-echo ""
-echo -e "${YELLOW}  Щоб запускати автоматично при старті Termux:${NC}"
-echo "  Встанови Termux:Boot з F-Droid, потім:"
-echo "  mkdir -p ~/.termux/boot"
-echo "  cp ~/uav-watcher/start.sh ~/.termux/boot/uav-watcher.sh"
+echo "  1. Додай ID каналів у config.json або через веб:"
+echo -e "     ${CYAN}http://localhost:8422${NC}"
+echo "  2. Запусти: bash $INSTALL_DIR/start.sh"
+echo "  3. Веб-інтерфейс: http://localhost:8422"
 echo ""
