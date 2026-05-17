@@ -99,7 +99,7 @@ def restart_service():
 
 
 HTML = """<!DOCTYPE html>
-<html lang="uk">
+<html lang="uk" dir="ltr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -213,14 +213,49 @@ HTML = """<!DOCTYPE html>
   .test-err { background: rgba(239,68,68,0.1);  border: 1px solid rgba(239,68,68,0.25);  color: var(--red);   padding: 7px 10px; border-radius: 3px; font-family: var(--mono); font-size: 10px; }
 
   @media (max-width: 750px) { .layout { flex-direction: column; } .col-side { width: 100%; } }
+
+  /* ── Language selector ── */
+  .lang-sel { display: flex; gap: 2px; margin-left: 10px; }
+  .lang-btn { background: none; border: none; cursor: pointer; font-size: 15px; padding: 1px 3px; border-radius: 3px; opacity: 0.45; transition: opacity 0.15s, transform 0.1s; line-height: 1; }
+  .lang-btn:hover { opacity: 0.9; transform: scale(1.12); }
+  .lang-btn.active { opacity: 1; }
+
+  /* ── RTL support ── */
+  [dir="rtl"] .layout { flex-direction: row-reverse; flex-wrap: wrap; }
+  [dir="rtl"] .topbar { flex-direction: row-reverse; }
+  [dir="rtl"] .topbar-sub { margin-left: 0; margin-right: 4px; }
+  [dir="rtl"] .lang-sel { margin-left: 0; margin-right: 10px; }
+  [dir="rtl"] .card-header { flex-direction: row-reverse; }
+  [dir="rtl"] .card-body { direction: rtl; }
+  [dir="rtl"] .btn-row { flex-direction: row-reverse; }
+  [dir="rtl"] .step { flex-direction: row-reverse; }
+  [dir="rtl"] .ch-row { flex-direction: row-reverse; }
+  [dir="rtl"] .ch-add-row { flex-direction: row-reverse; }
+  [dir="rtl"] .ch-section { text-align: right; }
+  [dir="rtl"] label { text-align: right; }
+  [dir="rtl"] input, [dir="rtl"] textarea { text-align: right; direction: rtl; }
+  [dir="rtl"] .hint { text-align: right; }
+  [dir="rtl"] .step-text { text-align: right; }
+  @media (max-width: 750px) { [dir="rtl"] .layout { flex-direction: column; } }
 </style>
 </head>
 <body>
 <div class="topbar">
   <div class="dot"></div>
-  <span class="topbar-title">UAV WATCHER</span>
-  <span class="topbar-sub">— система моніторингу БПЛА-загроз</span>
-  <span class="status-pill {status_class}">{status_text}</span>
+  <span class="topbar-title" data-i18n="title">UAV WATCHER</span>
+  <span class="topbar-sub" data-i18n="subtitle">— система моніторингу БПЛА-загроз</span>
+  <span class="status-pill {status_class}" data-state="{status_class}" data-i18n-state="status">{status_text}</span>
+  <div class="lang-sel" id="lang-sel">
+    <button class="lang-btn active" onclick="switchLang('uk')" title="Українська" data-lang="uk">🇺🇦</button>
+    <button class="lang-btn" onclick="switchLang('en')" title="English" data-lang="en">🇬🇧</button>
+    <button class="lang-btn" onclick="switchLang('de')" title="Deutsch" data-lang="de">🇩🇪</button>
+    <button class="lang-btn" onclick="switchLang('fr')" title="Français" data-lang="fr">🇫🇷</button>
+    <button class="lang-btn" onclick="switchLang('pl')" title="Polski" data-lang="pl">🇵🇱</button>
+    <button class="lang-btn" onclick="switchLang('es')" title="Español" data-lang="es">🇪🇸</button>
+    <button class="lang-btn" onclick="switchLang('tr')" title="Türkçe" data-lang="tr">🇹🇷</button>
+    <button class="lang-btn" onclick="switchLang('ar')" title="العربية" data-lang="ar">🇸🇦</button>
+    <button class="lang-btn" onclick="switchLang('fa')" title="فارسی" data-lang="fa">🇮🇷</button>
+  </div>
 </div>
 
 <div class="layout">
@@ -230,24 +265,24 @@ HTML = """<!DOCTYPE html>
 
     <!-- CITY CONFIG -->
     <div class="card">
-      <div class="card-header"><span class="card-title">🏙 Місто моніторингу</span></div>
+      <div class="card-header"><span class="card-title" data-i18n="card_city">🏙 Місто моніторингу</span></div>
       <form method="POST" action="/save-city">
       <div class="card-body">
         <div>
-          <label>Назва міста</label>
+          <label data-i18n="lbl_city">Назва міста</label>
           <input type="text" name="city" value="{city}" placeholder="Олександрія">
         </div>
         <div>
-          <label>Область</label>
+          <label data-i18n="lbl_region">Область</label>
           <input type="text" name="city_region" value="{city_region}" placeholder="Кіровоградська область">
         </div>
         <div>
-          <label>Ключові слова (через кому)</label>
+          <label data-i18n="lbl_keywords">Ключові слова (через кому)</label>
           <input type="text" name="city_keywords" value="{city_keywords}" placeholder="Олександрія, Олександрійськ">
-          <div class="hint" style="margin-top:5px">Слова для попередньої фільтрації — якщо жодне не знайдено в тексті, AI не викликається.</div>
+          <div class="hint" style="margin-top:5px" data-i18n="hint_keywords">Слова для попередньої фільтрації — якщо жодне не знайдено в тексті, AI не викликається.</div>
         </div>
         <div class="btn-row">
-          <button type="submit" class="btn btn-primary">Зберегти</button>
+          <button type="submit" class="btn btn-primary" data-i18n="btn_save">Зберегти</button>
         </div>
       </div>
       </form>
@@ -256,13 +291,13 @@ HTML = """<!DOCTYPE html>
     <!-- CHANNELS -->
     <div class="card" id="channels-card">
       <div class="card-header" style="justify-content:space-between">
-        <span class="card-title">📡 Канали моніторингу</span>
-        <span class="ch-total" id="ch-total">{channel_total} активних</span>
+        <span class="card-title" data-i18n="card_channels">📡 Канали моніторингу</span>
+        <span class="ch-total" id="ch-total"><span id="ch-total-num">{channel_total}</span> <span data-i18n="active">активних</span></span>
       </div>
       <div style="padding:0">
 
         <div class="ch-section">
-          <div class="ch-section-label">🔒 СИСТЕМНИЙ — ЗАВЖДИ АКТИВНИЙ</div>
+          <div class="ch-section-label" data-i18n="sys_channel_label">🔒 СИСТЕМНИЙ — ЗАВЖДИ АКТИВНИЙ</div>
           <div class="ch-row ch-locked">
             <span class="ch-pulse ch-pulse-amber"></span>
             <div class="ch-info">
@@ -276,7 +311,7 @@ HTML = """<!DOCTYPE html>
         <div class="ch-divider"></div>
 
         <div class="ch-section">
-          <div class="ch-section-label">📻 ВАШІ КАНАЛИ <span id="user-ch-count" style="font-weight:400;opacity:0.6">{user_channel_count}</span></div>
+          <div class="ch-section-label"><span data-i18n="user_channels_label">📻 ВАШІ КАНАЛИ</span> <span id="user-ch-count" style="font-weight:400;opacity:0.6">{user_channel_count}</span></div>
           <div id="user-channels-list">
             {user_channels_html}
           </div>
@@ -284,8 +319,9 @@ HTML = """<!DOCTYPE html>
           <div class="ch-add-wrap">
             <div class="ch-add-row">
               <input type="text" id="ch-input" class="ch-input" placeholder="@username або -1001234567890"
-                onkeydown="if(event.key==='Enter'){resolveChannel()}">
-              <button class="btn btn-ghost ch-btn" onclick="resolveChannel()" id="ch-resolve-btn" style="white-space:nowrap">Перевірити</button>
+                data-i18n-placeholder="ch_placeholder"
+              onkeydown="if(event.key==='Enter'){resolveChannel()}">
+              <button class="btn btn-ghost ch-btn" onclick="resolveChannel()" id="ch-resolve-btn" style="white-space:nowrap" data-i18n="btn_check">Перевірити</button>
             </div>
             <div id="ch-preview" class="ch-preview" style="display:none"></div>
           </div>
@@ -301,7 +337,7 @@ HTML = """<!DOCTYPE html>
 
     <!-- TELEGRAM CREDENTIALS -->
     <div class="card">
-      <div class="card-header"><span class="card-title">🔑 Telegram User Bot (Telethon)</span></div>
+      <div class="card-header"><span class="card-title" data-i18n="card_tg_user">🔑 Telegram User Bot (Telethon)</span></div>
       <form method="POST" action="/save-env">
       <div class="card-body">
         <div class="step-list">
@@ -320,7 +356,7 @@ HTML = """<!DOCTYPE html>
         </div>
         <div class="separator"></div>
         <div>
-          <label>Номер телефону</label>
+          <label data-i18n="lbl_phone">Номер телефону</label>
           <input type="tel" name="phone" value="{phone}" placeholder="+380501234567">
         </div>
         <div>
@@ -332,7 +368,7 @@ HTML = """<!DOCTYPE html>
           <input type="text" name="api_hash" value="{api_hash}" placeholder="0a1b2c3d4e5f...">
         </div>
         <div class="btn-row">
-          <button type="submit" class="btn btn-primary">Зберегти</button>
+          <button type="submit" class="btn btn-primary" data-i18n="btn_save">Зберегти</button>
           <span class="hint">Після збереження потрібно запустити <code>python3 auth.py</code> в терміналі для авторизації сесії</span>
         </div>
       </div>
@@ -345,7 +381,7 @@ HTML = """<!DOCTYPE html>
 
     <!-- USER ID INSTRUCTION -->
     <div class="card">
-      <div class="card-header"><span class="card-title">📲 Куди надсилати сповіщення</span></div>
+      <div class="card-header"><span class="card-title" data-i18n="card_notify">📲 Куди надсилати сповіщення</span></div>
       <div class="card-body">
         <div class="hint" style="margin-bottom:10px;line-height:1.7">Сповіщення надходять у твій особистий чат із ботом. Потрібно спочатку <strong style="color:rgba(255,255,255,0.75)">відкрити свого бота в Telegram і натиснути /start</strong> — без цього кроку бот не зможе писати тобі.</div>
         <div class="step-list">
@@ -365,11 +401,11 @@ HTML = """<!DOCTYPE html>
         <div class="separator"></div>
         <form method="POST" action="/save-notify">
           <div>
-            <label>Notify Chat ID (твій Telegram User ID)</label>
+            <label data-i18n="lbl_notify_id">Notify Chat ID (твій Telegram User ID)</label>
             <input type="text" name="notify_chat_id" value="{notify_chat_id}" placeholder="123456789">
           </div>
           <div class="btn-row" style="margin-top:8px">
-            <button type="submit" class="btn btn-primary" style="height:30px;font-size:10px;">Зберегти Chat ID</button>
+            <button type="submit" class="btn btn-primary" style="height:30px;font-size:10px;" data-i18n="btn_save_chatid">Зберегти Chat ID</button>
           </div>
         </form>
       </div>
@@ -377,15 +413,15 @@ HTML = """<!DOCTYPE html>
 
     <!-- SERVICE CONTROL -->
     <div class="card">
-      <div class="card-header"><span class="card-title">⚙ Сервіс</span></div>
+      <div class="card-header"><span class="card-title" data-i18n="card_service">⚙ Сервіс</span></div>
       <div class="card-body">
         <form method="POST" action="/restart">
-          <button type="submit" class="btn btn-ghost" style="width:100%">↺ Перезапустити сервіс</button>
+          <button type="submit" class="btn btn-ghost" style="width:100%" data-i18n="btn_restart">↺ Перезапустити сервіс</button>
         </form>
-        <div class="hint">Після зміни конфігурації або каналів — перезапусти сервіс.</div>
+        <div class="hint" data-i18n="hint_restart">Після зміни конфігурації або каналів — перезапусти сервіс.</div>
         <div class="separator"></div>
         <div class="hint">
-          <strong style="color:rgba(255,255,255,0.6)">Поточний стан:</strong><br>
+          <strong style="color:rgba(255,255,255,0.6)" data-i18n="cur_state">Поточний стан:</strong><br>
           City: <code>{city}</code><br>
           Channels: <code>{channel_count}</code><br>
           Model: <code>{model}</code>
@@ -395,11 +431,11 @@ HTML = """<!DOCTYPE html>
 
     <!-- BOT TOKEN -->
     <div class="card">
-      <div class="card-header"><span class="card-title">🤖 Telegram Bot — сповіщувач</span></div>
+      <div class="card-header"><span class="card-title" data-i18n="card_bot">🤖 Telegram Bot — сповіщувач</span></div>
       <div class="card-body">
 
         <details open>
-          <summary class="steps-toggle">Як створити бота через BotFather</summary>
+          <summary class="steps-toggle" data-i18n="step_botfather_toggle">Як створити бота через BotFather</summary>
           <div class="steps-body">
             <div class="step-list" style="margin-top:10px">
               <div class="step">
@@ -438,8 +474,8 @@ HTML = """<!DOCTYPE html>
             <input type="text" name="bot_token" value="{bot_token}" placeholder="1234567890:AAEfzH9fq4jM81gy...">
           </div>
           <div class="btn-row" style="margin-top:10px">
-            <button type="submit" class="btn btn-primary" style="height:30px;font-size:10px;">Зберегти токен</button>
-            <button type="button" class="btn btn-ghost" style="height:30px;font-size:10px;" onclick="sendTest()">▶ Тест</button>
+            <button type="submit" class="btn btn-primary" style="height:30px;font-size:10px;" data-i18n="btn_save_token">Зберегти токен</button>
+            <button type="button" class="btn btn-ghost" style="height:30px;font-size:10px;" onclick="sendTest()" data-i18n="btn_test">▶ Тест</button>
           </div>
           <div id="test-result" style="margin-top:8px;display:none"></div>
         </form>
@@ -489,7 +525,7 @@ async function resolveChannel() {
     preview.innerHTML = `<span style="font-family:var(--mono);font-size:11px;color:var(--red)">Помилка з'єднання</span>`;
   }
   btn.disabled = false;
-  btn.textContent = 'Перевірити';
+  btn.textContent = (T[currentLang] || T['uk']).btn_check;
 }
 
 async function addChannel() {
@@ -524,9 +560,10 @@ async function refreshChannels() {
   const list = document.getElementById('user-channels-list');
   const count = document.getElementById('user-ch-count');
   const total = document.getElementById('ch-total');
-  list.innerHTML = d.user_channels.map(ch => channelRow(ch)).join('') || '<div style="padding:6px 0;font-family:var(--mono);font-size:10px;color:var(--dim)">— немає власних каналів —</div>';
+  const _t = T[currentLang] || T['uk'];
+  list.innerHTML = d.user_channels.map(ch => channelRow(ch)).join('') || `<div style="padding:6px 0;font-family:var(--mono);font-size:10px;color:var(--dim)">${_t.no_channels}</div>`;
   count.textContent = d.user_channels.length;
-  total.textContent = (d.user_channels.length + d.locked_count) + ' активних';
+  total.innerHTML = `<span id="ch-total-num">${d.user_channels.length + d.locked_count}</span> ${_t.active}`;
 }
 
 function channelRow(ch) {
@@ -557,11 +594,254 @@ async function sendTest() {
   } catch(e) {
     res.style.display = 'block';
     res.className = 'test-err';
-    res.textContent = 'Помилка з\'єднання';
+    res.textContent = (T[currentLang] || T['uk']).err_connection;
   }
   btn.disabled = false;
-  btn.textContent = '▶ Тест';
+  btn.textContent = (T[currentLang] || T['uk']).btn_test;
 }
+
+// ── i18n ─────────────────────────────────────────────────────────────────────
+const T = {
+  uk: {
+    title: `UAV WATCHER`, subtitle: `— система моніторингу БПЛА-загроз`,
+    status_running: `● запущено`, status_stopped: `● зупинено`,
+    card_city: `🏙 Місто моніторингу`, card_channels: `📡 Канали моніторингу`,
+    card_tg_user: `🔑 Telegram User Bot (Telethon)`,
+    card_notify: `📲 Куди надсилати сповіщення`,
+    card_service: `⚙ Сервіс`, card_bot: `🤖 Telegram Bot — сповіщувач`,
+    lbl_city: `Назва міста`, lbl_region: `Область`,
+    lbl_keywords: `Ключові слова (через кому)`, lbl_phone: `Номер телефону`,
+    lbl_notify_id: `Notify Chat ID (твій Telegram User ID)`,
+    btn_save: `Зберегти`, btn_check: `Перевірити`, btn_test: `▶ Тест`,
+    btn_restart: `↺ Перезапустити сервіс`, btn_save_chatid: `Зберегти Chat ID`,
+    btn_save_token: `Зберегти токен`,
+    hint_keywords: `Слова для попередньої фільтрації — якщо жодне не знайдено в тексті, AI не викликається.`,
+    hint_restart: `Після зміни конфігурації або каналів — перезапусти сервіс.`,
+    sys_channel_label: `🔒 СИСТЕМНИЙ — ЗАВЖДИ АКТИВНИЙ`,
+    user_channels_label: `📻 ВАШІ КАНАЛИ`,
+    no_channels: `— немає власних каналів —`, active: `активних`,
+    step_botfather_toggle: `Як створити бота через BotFather`,
+    cur_state: `Поточний стан:`, ch_placeholder: `@username або -1001234567890`,
+    err_connection: `Помилка з'єднання`,
+  },
+  en: {
+    title: `UAV WATCHER`, subtitle: `— UAV threat monitoring system`,
+    status_running: `● running`, status_stopped: `● stopped`,
+    card_city: `🏙 Monitoring city`, card_channels: `📡 Monitoring channels`,
+    card_tg_user: `🔑 Telegram User Bot (Telethon)`,
+    card_notify: `📲 Where to send notifications`,
+    card_service: `⚙ Service`, card_bot: `🤖 Telegram Bot — notifier`,
+    lbl_city: `City name`, lbl_region: `Region`,
+    lbl_keywords: `Keywords (comma separated)`, lbl_phone: `Phone number`,
+    lbl_notify_id: `Notify Chat ID (your Telegram User ID)`,
+    btn_save: `Save`, btn_check: `Check`, btn_test: `▶ Test`,
+    btn_restart: `↺ Restart service`, btn_save_chatid: `Save Chat ID`,
+    btn_save_token: `Save token`,
+    hint_keywords: `Pre-filter words — if none found in message, AI is not called.`,
+    hint_restart: `After changing config or channels — restart the service.`,
+    sys_channel_label: `🔒 SYSTEM — ALWAYS ACTIVE`,
+    user_channels_label: `📻 YOUR CHANNELS`,
+    no_channels: `— no custom channels —`, active: `active`,
+    step_botfather_toggle: `How to create a bot via BotFather`,
+    cur_state: `Current state:`, ch_placeholder: `@username or -1001234567890`,
+    err_connection: `Connection error`,
+  },
+  de: {
+    title: `UAV WATCHER`, subtitle: `— UAV-Bedrohungsüberwachungssystem`,
+    status_running: `● läuft`, status_stopped: `● gestoppt`,
+    card_city: `🏙 Überwachungsstadt`, card_channels: `📡 Überwachungskanäle`,
+    card_tg_user: `🔑 Telegram User Bot (Telethon)`,
+    card_notify: `📲 Wo Benachrichtigungen senden`,
+    card_service: `⚙ Dienst`, card_bot: `🤖 Telegram Bot — Benachrichtiger`,
+    lbl_city: `Stadtname`, lbl_region: `Region`,
+    lbl_keywords: `Schlüsselwörter (kommagetrennt)`, lbl_phone: `Telefonnummer`,
+    lbl_notify_id: `Benachrichtigungs-Chat-ID (Telegram User ID)`,
+    btn_save: `Speichern`, btn_check: `Prüfen`, btn_test: `▶ Test`,
+    btn_restart: `↺ Dienst neustarten`, btn_save_chatid: `Chat-ID speichern`,
+    btn_save_token: `Token speichern`,
+    hint_keywords: `Vorfilter-Wörter — wenn keines im Text gefunden, wird KI nicht aufgerufen.`,
+    hint_restart: `Nach Konfig- oder Kanaländerungen — Dienst neustarten.`,
+    sys_channel_label: `🔒 SYSTEM — IMMER AKTIV`,
+    user_channels_label: `📻 DEINE KANÄLE`,
+    no_channels: `— keine eigenen Kanäle —`, active: `aktiv`,
+    step_botfather_toggle: `So erstellt man einen Bot via BotFather`,
+    cur_state: `Aktueller Status:`, ch_placeholder: `@username oder -1001234567890`,
+    err_connection: `Verbindungsfehler`,
+  },
+  fr: {
+    title: `UAV WATCHER`, subtitle: `— système de surveillance des menaces UAV`,
+    status_running: `● en cours`, status_stopped: `● arrêté`,
+    card_city: `🏙 Ville surveillée`, card_channels: `📡 Canaux de surveillance`,
+    card_tg_user: `🔑 Telegram User Bot (Telethon)`,
+    card_notify: `📲 Où envoyer les notifications`,
+    card_service: `⚙ Service`, card_bot: `🤖 Telegram Bot — notificateur`,
+    lbl_city: `Nom de la ville`, lbl_region: `Région`,
+    lbl_keywords: `Mots-clés (séparés par des virgules)`, lbl_phone: `Numéro de téléphone`,
+    lbl_notify_id: `Chat ID de notification (votre User ID Telegram)`,
+    btn_save: `Enregistrer`, btn_check: `Vérifier`, btn_test: `▶ Test`,
+    btn_restart: `↺ Redémarrer le service`, btn_save_chatid: `Enregistrer Chat ID`,
+    btn_save_token: `Enregistrer le token`,
+    hint_keywords: `Mots de pré-filtre — si aucun trouvé dans le message, l'IA n'est pas appelée.`,
+    hint_restart: `Après modification de la config ou des canaux — redémarrez le service.`,
+    sys_channel_label: `🔒 SYSTÈME — TOUJOURS ACTIF`,
+    user_channels_label: `📻 VOS CANAUX`,
+    no_channels: `— aucun canal personnalisé —`, active: `actif`,
+    step_botfather_toggle: `Comment créer un bot via BotFather`,
+    cur_state: `État actuel :`, ch_placeholder: `@username ou -1001234567890`,
+    err_connection: `Erreur de connexion`,
+  },
+  pl: {
+    title: `UAV WATCHER`, subtitle: `— system monitorowania zagrożeń UAV`,
+    status_running: `● działa`, status_stopped: `● zatrzymany`,
+    card_city: `🏙 Monitorowane miasto`, card_channels: `📡 Kanały monitorowania`,
+    card_tg_user: `🔑 Telegram User Bot (Telethon)`,
+    card_notify: `📲 Gdzie wysyłać powiadomienia`,
+    card_service: `⚙ Usługa`, card_bot: `🤖 Telegram Bot — powiadamiacz`,
+    lbl_city: `Nazwa miasta`, lbl_region: `Region`,
+    lbl_keywords: `Słowa kluczowe (oddzielone przecinkami)`, lbl_phone: `Numer telefonu`,
+    lbl_notify_id: `Notify Chat ID (twój Telegram User ID)`,
+    btn_save: `Zapisz`, btn_check: `Sprawdź`, btn_test: `▶ Test`,
+    btn_restart: `↺ Uruchom ponownie usługę`, btn_save_chatid: `Zapisz Chat ID`,
+    btn_save_token: `Zapisz token`,
+    hint_keywords: `Słowa do wstępnego filtrowania — jeśli żadne nie zostanie znalezione, AI nie jest wywoływane.`,
+    hint_restart: `Po zmianie konfiguracji lub kanałów — uruchom ponownie usługę.`,
+    sys_channel_label: `🔒 SYSTEMOWY — ZAWSZE AKTYWNY`,
+    user_channels_label: `📻 TWOJE KANAŁY`,
+    no_channels: `— brak własnych kanałów —`, active: `aktywnych`,
+    step_botfather_toggle: `Jak utworzyć bota przez BotFather`,
+    cur_state: `Aktualny stan:`, ch_placeholder: `@username lub -1001234567890`,
+    err_connection: `Błąd połączenia`,
+  },
+  es: {
+    title: `UAV WATCHER`, subtitle: `— sistema de monitoreo de amenazas UAV`,
+    status_running: `● ejecutando`, status_stopped: `● detenido`,
+    card_city: `🏙 Ciudad de monitoreo`, card_channels: `📡 Canales de monitoreo`,
+    card_tg_user: `🔑 Telegram User Bot (Telethon)`,
+    card_notify: `📲 Dónde enviar notificaciones`,
+    card_service: `⚙ Servicio`, card_bot: `🤖 Telegram Bot — notificador`,
+    lbl_city: `Nombre de ciudad`, lbl_region: `Región`,
+    lbl_keywords: `Palabras clave (separadas por comas)`, lbl_phone: `Número de teléfono`,
+    lbl_notify_id: `Chat ID de notificación (tu User ID de Telegram)`,
+    btn_save: `Guardar`, btn_check: `Verificar`, btn_test: `▶ Prueba`,
+    btn_restart: `↺ Reiniciar servicio`, btn_save_chatid: `Guardar Chat ID`,
+    btn_save_token: `Guardar token`,
+    hint_keywords: `Palabras de prefiltro — si ninguna se encuentra en el mensaje, la IA no se llama.`,
+    hint_restart: `Después de cambiar la configuración o canales — reinicia el servicio.`,
+    sys_channel_label: `🔒 SISTEMA — SIEMPRE ACTIVO`,
+    user_channels_label: `📻 TUS CANALES`,
+    no_channels: `— sin canales personalizados —`, active: `activos`,
+    step_botfather_toggle: `Cómo crear un bot a través de BotFather`,
+    cur_state: `Estado actual:`, ch_placeholder: `@username o -1001234567890`,
+    err_connection: `Error de conexión`,
+  },
+  tr: {
+    title: `UAV WATCHER`, subtitle: `— İHA tehdit izleme sistemi`,
+    status_running: `● çalışıyor`, status_stopped: `● durduruldu`,
+    card_city: `🏙 İzleme şehri`, card_channels: `📡 İzleme kanalları`,
+    card_tg_user: `🔑 Telegram Kullanıcı Botu (Telethon)`,
+    card_notify: `📲 Bildirimler nereye gönderilsin`,
+    card_service: `⚙ Servis`, card_bot: `🤖 Telegram Bot — bildirimci`,
+    lbl_city: `Şehir adı`, lbl_region: `Bölge`,
+    lbl_keywords: `Anahtar kelimeler (virgülle ayrılmış)`, lbl_phone: `Telefon numarası`,
+    lbl_notify_id: `Bildirim Chat ID'si (Telegram Kullanıcı ID'niz)`,
+    btn_save: `Kaydet`, btn_check: `Kontrol et`, btn_test: `▶ Test`,
+    btn_restart: `↺ Servisi yeniden başlat`, btn_save_chatid: `Chat ID'yi kaydet`,
+    btn_save_token: `Token'ı kaydet`,
+    hint_keywords: `Ön filtre kelimeleri — mesajda hiçbiri bulunamazsa, AI çağrılmaz.`,
+    hint_restart: `Yapılandırma veya kanallar değiştirildiğinde — servisi yeniden başlatın.`,
+    sys_channel_label: `🔒 SİSTEM — HER ZAMAN AKTİF`,
+    user_channels_label: `📻 KANALLARINIZ`,
+    no_channels: `— özel kanal yok —`, active: `aktif`,
+    step_botfather_toggle: `BotFather aracılığıyla nasıl bot oluşturulur`,
+    cur_state: `Mevcut durum:`, ch_placeholder: `@username veya -1001234567890`,
+    err_connection: `Bağlantı hatası`,
+  },
+  ar: {
+    title: `UAV WATCHER`, subtitle: `— نظام مراقبة تهديدات الطائرات بدون طيار`,
+    status_running: `● يعمل`, status_stopped: `● متوقف`,
+    card_city: `🏙 مدينة المراقبة`, card_channels: `📡 قنوات المراقبة`,
+    card_tg_user: `🔑 روبوت مستخدم تيليغرام (Telethon)`,
+    card_notify: `📲 أين ترسل الإشعارات`,
+    card_service: `⚙ الخدمة`, card_bot: `🤖 روبوت تيليغرام — المُشعِر`,
+    lbl_city: `اسم المدينة`, lbl_region: `المنطقة`,
+    lbl_keywords: `الكلمات المفتاحية (مفصولة بفواصل)`, lbl_phone: `رقم الهاتف`,
+    lbl_notify_id: `معرّف المحادثة للإشعارات (User ID تيليغرام)`,
+    btn_save: `حفظ`, btn_check: `تحقق`, btn_test: `▶ اختبار`,
+    btn_restart: `↺ إعادة تشغيل الخدمة`, btn_save_chatid: `حفظ معرّف المحادثة`,
+    btn_save_token: `حفظ الرمز`,
+    hint_keywords: `كلمات للتصفية المسبقة — إذا لم تُعثر على أي منها في الرسالة، لا يُستدعى الذكاء الاصطناعي.`,
+    hint_restart: `بعد تغيير الإعدادات أو القنوات — أعد تشغيل الخدمة.`,
+    sys_channel_label: `🔒 قناة النظام — نشطة دائماً`,
+    user_channels_label: `📻 قنواتك`,
+    no_channels: `— لا توجد قنوات مخصصة —`, active: `نشطة`,
+    step_botfather_toggle: `كيفية إنشاء روبوت عبر BotFather`,
+    cur_state: `الحالة الحالية:`, ch_placeholder: `@username أو -1001234567890`,
+    err_connection: `خطأ في الاتصال`,
+  },
+  fa: {
+    title: `UAV WATCHER`, subtitle: `— سیستم پایش تهدیدات پهپادی`,
+    status_running: `● در حال اجرا`, status_stopped: `● متوقف`,
+    card_city: `🏙 شهر پایش`, card_channels: `📡 کانال‌های پایش`,
+    card_tg_user: `🔑 ربات کاربری تلگرام (Telethon)`,
+    card_notify: `📲 کجا اعلان‌ها ارسال شوند`,
+    card_service: `⚙ سرویس`, card_bot: `🤖 ربات تلگرام — اعلان‌دهنده`,
+    lbl_city: `نام شهر`, lbl_region: `استان`,
+    lbl_keywords: `کلیدواژه‌ها (با کاما جدا شده)`, lbl_phone: `شماره تلفن`,
+    lbl_notify_id: `شناسه چت اعلان (User ID تلگرام شما)`,
+    btn_save: `ذخیره`, btn_check: `بررسی`, btn_test: `▶ آزمون`,
+    btn_restart: `↺ راه‌اندازی مجدد سرویس`, btn_save_chatid: `ذخیره شناسه چت`,
+    btn_save_token: `ذخیره توکن`,
+    hint_keywords: `کلمات برای فیلتر اولیه — اگر هیچ‌کدام در پیام یافت نشد، هوش مصنوعی فراخوانی نمی‌شود.`,
+    hint_restart: `پس از تغییر تنظیمات یا کانال‌ها — سرویس را راه‌اندازی مجدد کنید.`,
+    sys_channel_label: `🔒 کانال سیستم — همیشه فعال`,
+    user_channels_label: `📻 کانال‌های شما`,
+    no_channels: `— کانال سفارشی وجود ندارد —`, active: `فعال`,
+    step_botfather_toggle: `چگونه یک ربات از طریق BotFather بسازیم`,
+    cur_state: `وضعیت فعلی:`, ch_placeholder: `@username یا -1001234567890`,
+    err_connection: `خطای اتصال`,
+  },
+};
+
+let currentLang = 'uk';
+
+function applyLang(lang) {
+  const t = T[lang] || T['uk'];
+  currentLang = lang;
+  document.documentElement.lang = lang;
+  document.documentElement.dir = (lang === 'ar' || lang === 'fa') ? 'rtl' : 'ltr';
+
+  document.querySelectorAll('[data-i18n]').forEach(function(el) {
+    const k = el.dataset.i18n;
+    if (t[k] !== undefined) el.textContent = t[k];
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(function(el) {
+    const k = el.dataset.i18nPlaceholder;
+    if (t[k] !== undefined) el.placeholder = t[k];
+  });
+  // Status pill
+  document.querySelectorAll('[data-i18n-state]').forEach(function(el) {
+    el.textContent = el.dataset.state === 'ok' ? t.status_running : t.status_stopped;
+  });
+  // ch-total
+  const tn = document.getElementById('ch-total-num');
+  const tc = document.getElementById('ch-total');
+  if (tn && tc) tc.innerHTML = `<span id="ch-total-num">${tn.textContent}</span> ${t.active}`;
+  // active lang button
+  document.querySelectorAll('.lang-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.lang === lang);
+  });
+  localStorage.setItem('uav-lang', lang);
+}
+
+function switchLang(lang) { applyLang(lang); }
+
+// auto-detect on load
+(function() {
+  var saved = localStorage.getItem('uav-lang');
+  var bl = (navigator.language || 'uk').slice(0, 2);
+  var avail = Object.keys(T);
+  applyLang(saved || (avail.indexOf(bl) >= 0 ? bl : 'uk'));
+})();
 </script>
 </body>
 </html>"""
