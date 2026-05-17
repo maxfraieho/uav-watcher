@@ -246,6 +246,11 @@ async def main():
     register_family_handlers(bot_app, cfg)
     log.info("Family bot handlers registered.")
 
+    # --- LOCATION TRACKER (Task 2.1) ---
+    from rescue.location_tracker import register_location_handlers
+    register_location_handlers(bot_app, cfg)
+    log.info("Location tracker handlers registered.")
+
     await asyncio.gather(
         client.run_until_disconnected(),
         bot_app.run_until_disconnected()

@@ -153,11 +153,18 @@ async def run_rollcall(bot_client, cfg: dict, family_id: int, threat_type: str):
     await asyncio.sleep(600)
 
     status = get_rollcall_status(rollcall_id)
+    from rescue.location_tracker import get_last_location
     for detail in status['details']:
         if detail['status'] == 'no_response':
+            loc = get_last_location(detail['user_id'])
+            if loc:
+                loc_link = f"https://maps.google.com/?q={loc['lat']},{loc['lon']}"
+                loc_info = f"\n📍 Останнє відоме місце: {loc_link}\n🕐 {loc['updated_at']}"
+            else:
+                loc_info = "\n📍 Геолокація не збережена."
             alert_msg = (
                 f"⚠️ *{detail['name']}* не відповів протягом 10 хвилин!\n"
-                f"Можливо потрібна допомога. Зателефонуй або перевір."
+                f"Можливо потрібна допомога. Зателефонуй або перевір.{loc_info}"
             )
             for other in members:
                 if other['user_id'] != detail['user_id']:
