@@ -1483,6 +1483,20 @@ HTML = """<!DOCTYPE html>
   .chat-text-input::placeholder { color: rgba(167,139,125,0.4); }
   .chat-send-btn { height: 40px; width: 44px; padding: 0; font-size: 15px; min-height: 44px; flex-shrink: 0; }
 
+  /* ── TYPING INDICATOR ── */
+  .chat-typing { display: inline-flex; gap: 5px; align-items: center; padding: 4px 2px; }
+  .chat-typing span {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--dim); display: inline-block;
+    animation: typing-bounce 1.2s ease-in-out infinite;
+  }
+  .chat-typing span:nth-child(2) { animation-delay: 0.2s; }
+  .chat-typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typing-bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.35; }
+    30% { transform: translateY(-7px); opacity: 1; }
+  }
+
   /* Overlay backdrop on mobile */
   .chat-backdrop {
     display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 299;
@@ -2107,7 +2121,7 @@ function toggleChat() {
 
 function _mdToHtml(s) {
   // strip meta-label lines and hallucinated URLs the LLM may echo
-  s = s.replace(/^\s*[\u{1F4DA}\u{2139}]?\s*\[[^\]]+\][\s:]*(?:https?:\/\/\S+)?\s*$/umg, '').trim();
+  s = s.replace(/^\s*\[[^\]]+\][\s:]*(?:https?:\/\/\S+)?\s*$/mg, '').trim();
   s = s.replace(/^\s*\[[^\]]+\][\s:]*(?:https?:\/\/\S+)?\s*$/mg, '').trim();
   // strip bare URLs on their own line
   s = s.replace(/^\s*https?:\/\/\S+\s*$/mg, '').trim();
@@ -2118,11 +2132,11 @@ function _mdToHtml(s) {
   // **bold**
   s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   // *text* -> italic
-  s = s.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+  s = s.replace(/\*([^*\\n]+)\*/g, '<strong>$1</strong>');
   // list items: "- text" at line start -> bullet
   s = s.replace(/^-\s+(.+)$/gm, '• $1');
   // paragraph breaks and newlines
-  s = s.replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>');
+  s = s.replace(/\\n\\n/g, '<br><br>').replace(/\\n/g, '<br>');
   return s;
 }
 function _chatAddMsg(role, title, text) {
@@ -2151,8 +2165,15 @@ async function sendChat() {
   var q   = inp.value.trim();
   if (!q) return;
   inp.value = '';
+  inp.disabled = true;
   _chatAddMsg('user', '', q);
   document.getElementById('chat-chips').style.display = 'none';
+  var msgs = document.getElementById('chat-messages');
+  var typing = document.createElement('div');
+  typing.className = 'chat-msg chat-msg-bot';
+  typing.innerHTML = '<div class="chat-typing"><span></span><span></span><span></span></div>';
+  msgs.appendChild(typing);
+  msgs.scrollTop = msgs.scrollHeight;
   try {
     var r = await fetch('/api/chat', {
       method: 'POST',
@@ -2160,9 +2181,14 @@ async function sendChat() {
       body: JSON.stringify({q: q})
     });
     var d = await r.json();
+    typing.remove();
     _chatAddMsg('bot', d.title || '', d.text || d.error || 'Помилка');
   } catch(e) {
+    typing.remove();
     _chatAddMsg('bot', '', "Помилка з\'єднання. Спробуй ще раз.");
+  } finally {
+    inp.disabled = false;
+    inp.focus();
   }
 }
 
