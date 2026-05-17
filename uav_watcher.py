@@ -104,6 +104,9 @@ async def send_notification(text: str, reason: str, cfg: dict):
 
 
 async def main():
+    from db.models import init_db
+    init_db()
+
     cfg = load_config()
     city = cfg.get("city", "Олександрія")
     keywords = cfg.get("city_keywords", [city])

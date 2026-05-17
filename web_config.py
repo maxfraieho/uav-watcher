@@ -20,6 +20,85 @@ LOCKED_CHANNELS = {
     -1001223955273: {"title": "Повітряні Сили ЗС України", "username": "kpszsu", "id": -1001223955273}
 }
 
+# ── In-UI Chat Knowledge Base ─────────────────────────────────────────────────
+CHAT_KB = {
+    "uav": {
+        "title": "🚁 БПЛА / Дрон-камікадзе",
+        "text": "🚁 *ЗАГРОЗА БПЛА — ДІЙ ЗАРАЗ*\n\n✅ *НЕГАЙНО:*\n• Відійди від вікон — ляж на підлогу\n• Вимкни світло, закрий штори (перекриває оптику)\n• НЕ виходь надвір — дрон відстежує рух\n• Телефон на беззвучний, але НЕ вимикай\n\n🏠 *УКРИТТЯ (правило двох стін):*\nВанна кімната або коридор > підвал\nНЕ ховайся під сходами (ризик обвалу)\n\n💥 *ПІСЛЯ ВИБУХУ В РАДІУСІ 500м:*\n• Зачини вікна (хімічна загроза)\n• Не виходь 15 хв (можлива друга хвиля)\n• Зателефонуй: 101 або 112"
+    },
+    "ballistic": {
+        "title": "🚀 Балістична ракета / Іскандер",
+        "text": "🚀 *БАЛІСТИЧНА ЗАГРОЗА — СЕКУНДИ ВИРІШУЮТЬ*\n\n⚡ Час: 2–4 хвилини до удару\n\n✅ *ЯКЩО Є ЧАС:*\nПідвал або 1-й поверх, несучі стіни\n\n✅ *ЯКЩО НЕ ВСТИГ:*\n• Ляж у будь-яке заглиблення (канава, підземний перехід)\n• Відкрий рот (від вибухової хвилі)\n• Прикрий потилицю руками\n• Відвернись від напрямку загрози\n\n📵 НЕ знімай відео — йди в укриття"
+    },
+    "cruise": {
+        "title": "✈️ Крилата ракета / Калібр",
+        "text": "✈️ *КРИЛАТА РАКЕТА — УКРИЙСЯ*\n\n✅ *НЕГАЙНО:*\n• Підземний паркінг або підвал — мета №1\n• Від вікон якомога далі\n• Не стій у відкритих місцях\n\n⚠️ Kalibr летить на малій висоті — попередження може бути коротким\n\n🔇 Вимкни газ, відкрий вікно в іншій кімнаті (від вибухової хвилі)\n\n📞 Після відбою: 101 (ДСНС), 112"
+    },
+    "fab": {
+        "title": "💣 Авіабомба FAB / Планер",
+        "text": "💣 *FAB АВІАБОМБА — МАКСИМАЛЬНА ЗАГРОЗА*\n\n‼️ Правило двох стін НЕ ПРАЦЮЄ\n‼️ Потрібен ГЛИБОКИЙ підвал або багаторівневе бомбосховище\n\n✅ *НЕГАЙНО:*\n• Глибоке бомбосховище / метро / підземний паркінг\n• НЕ залишайся в квартирі — навіть на 1-му поверсі\n• Якщо немає укриття — відійди від будівель щонайменше 50м\n• Ляж у ямку/канаву, прикрий голову\n\n📞 112 або 101 — після удару"
+    },
+    "chemical": {
+        "title": "☣️ Хімічна / Токсична загроза",
+        "text": "☣️ *ХІМІЧНА ЗАГРОЗА — ГЕРМЕТИЗУЙ ПРИМІЩЕННЯ*\n\n🔴 Ознаки: незвичний запах, димова хмара, симптоми у людей\n\n✅ *НЕГАЙНО:*\n• Закрий ВСІ вікна і двері ГЕРМЕТИЧНО\n• Змочи тканину — прикрий рот і ніс\n• Піднімись вище (більшість газів важчі за повітря)\n• Заклей щілини скотчем якщо є\n\n🚫 *НЕ виходь без захисту*\n\n✅ *Якщо ти надворі:*\n• Тримайся з навітряного боку\n• Знімай одяг, рясно промивай шкіру водою\n\n📞 101 — одразу"
+    },
+    "rubble": {
+        "title": "🆘 Під завалами / Будинок зруйновано",
+        "text": "🆘 *ПІД ЗАВАЛАМИ — ЩО РОБИТИ*\n\n📱 *ЯКЩО ТИ ПІД ЗАВАЛАМИ:*\n• Стукай по трубах або бетону КОЖНІ 30 СЕК\n• Прикрий рот тканиною від пилу\n• Дихай спокійно — економ кисень\n• НЕ кричи постійно — втратиш сили\n\n👥 *ЯКЩО ШУКАЄШ ЛЮДИНУ:*\n• Зателефонуй 101 (ДСНС) — ПЕРШОЧЕРГОВО\n• Слухай кожні 2 хвилини: стукіт, голос\n• НЕ рухай великі уламки самостійно\n\n📞 101 або 112"
+    },
+    "allclear": {
+        "title": "✅ Відбій тривоги",
+        "text": "✅ *ВІДБІЙ — НЕБЕЗПЕКА МИНУЛА*\n\nПерш ніж виходити:\n• Зачекай 5–10 хвилин після офіційного відбою\n• Оглянь вулицю через вікно перед виходом\n• Не торкайся невідомих предметів на вулиці\n\n💬 Повідом рідних що ти в безпеці"
+    },
+    "panic": {
+        "title": "😰 Технiка заземлення 5-4-3-2-1",
+        "text": "😰 *ТЕХНIКА ЗАЗЕМЛЕННЯ (5-4-3-2-1)*\n\nКоли накриває паніка — зроби це:\n\n🟢 *1.* Назви 5 речей які ти БАЧИШ зараз\n🟢 *2.* Торкнись 4 різних поверхні поруч з тобою\n🟢 *3.* Прислухайся — назви 3 звуки які чуєш\n🟢 *4.* Відчуй 2 запахи або текстури\n🟢 *5.* Зроби 1 глибокий вдих... і повільний видих\n\n✅ Ти тут. Ти в безпеці. Продовжуй дихати рівно.\n\n💬 Зв'яжись з рідними — повідом що ти в безпеці."
+    },
+    "shelter": {
+        "title": "🏠 Де ховатись — ієрархія укриттів",
+        "text": "🏠 *ІЄРАРХІЯ УКРИТТІВ*\n\n1. Метро / глибокий підвал / бомбосховище\n2. Підземний паркінг\n3. 1-й поверх — ванна/коридор (від вікон)\n4. Будь-яке заглиблення надворі\n\n*Правило двох стін:*\nМіж тобою і вулицею — мінімум 2 несучі стіни\n\n*НЕ ховайся:*\n• Під сходами (ризик обвалу)\n• В ліфті (відключається при тривозі)\n• На верхніх поверхах\n\n⚠️ При загрозі FAB — правило двох стін не діє. Потрібен глибокий підвал."
+    },
+    "phones": {
+        "title": "📞 Телефони екстрених служб",
+        "text": "📞 *ЕКСТРЕНІ НОМЕРИ*\n\n101 — Пожежа / ДСНС\n102 — Поліція\n103 — Швидка допомога\n104 — Аварійна газова служба\n*112* — Єдина екстрена (всі три)\n\nПри виявленні НВП (нерозірваних боєприпасів):\n→ 101 або 102 — НЕ торкайся"
+    },
+    "channels": {
+        "title": "📡 Як додати канал моніторингу",
+        "text": "📡 *ДОДАТИ TELEGRAM-КАНАЛ*\n\n1. Знайди ID каналу:\n• Перешли повідомлення з каналу боту @userinfobot\n• Або @getmyid_bot → /start\n• ID виглядає як -1002187970584\n\n2. Встав ID у поле 'Канали моніторингу' на цій сторінці\n3. Натисни 'Перевірити' → потім 'Додати'\n4. Перезапусти сервіс\n\n🔍 *Де шукати:*\nПошук в Telegram: 'повітряна тривога кіровоград'\ntgstat.ua → фільтр 'Безпека'"
+    },
+    "unknown": {
+        "title": "",
+        "text": "❓ Не знайшов точної відповіді.\n\nСпробуй запитати про:\n• 🚁 БПЛА / дрон\n• 🚀 Балістична ракета / Іскандер\n• ✈️ Крилата ракета / Калібр\n• 💣 FAB авіабомба\n• ☣️ Хімічна загроза\n• 🆘 Під завалами\n• 😰 Паніка / заземлення\n• ✅ Відбій тривоги\n• 🏠 Де ховатись\n• 📞 Телефони екстрених служб\n• 📡 Як додати канал"
+    }
+}
+
+def chat_match(question: str) -> dict:
+    q = question.lower()
+    if any(k in q for k in ['бпла','дрон','шахед','shahed','ланцет','uav','камікадз']):
+        return CHAT_KB['uav']
+    if any(k in q for k in ['балістич','iskander','іскандер','балістика','іскандер']):
+        return CHAT_KB['ballistic']
+    if any(k in q for k in ['крилат','калібр','kalibr','x-101','x-55','cruise']):
+        return CHAT_KB['cruise']
+    if any(k in q for k in ['фаб','авіабомб','fab','планер','glide']):
+        return CHAT_KB['fab']
+    if any(k in q for k in ['хімічн','chemical','токсич','газ','отруй','☣']):
+        return CHAT_KB['chemical']
+    if any(k in q for k in ['завал','зруйнов','trapped','rubble','під завал']):
+        return CHAT_KB['rubble']
+    if any(k in q for k in ['відбій','allclear','all clear','тривог','скінчил','скасов']):
+        return CHAT_KB['allclear']
+    if any(k in q for k in ['паніка','пані','calm','заземл','заспокою','5 речей','grounding','дихан']):
+        return CHAT_KB['panic']
+    if any(k in q for k in ['укриття','сховище','shelter','де сховат','де ховат','підвал','бомбосховищ']):
+        return CHAT_KB['shelter']
+    if any(k in q for k in ['телефон','101','102','103','112','дзвони','виклик','служба','екстрен']):
+        return CHAT_KB['phones']
+    if any(k in q for k in ['канал','channel','додати','знайти канал','tgstat','userinfobot','telegram']):
+        return CHAT_KB['channels']
+    return CHAT_KB['unknown']
+
+
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config.json")
 ENV_PATH = os.path.join(os.path.dirname(__file__), ".env")
 PORT = 8422
@@ -406,13 +485,14 @@ def get_bot_info() -> tuple:
 
 
 def shelter_ai_query(user_msg: str, context: str) -> str:
-    """Ask goclaw about shelters and safety. Returns AI reply text."""
+    """Ask LLM proxy about shelters and safety. Returns AI reply text."""
     cfg     = load_config()
-    url     = cfg.get("goclaw_url", "")
-    api_key = cfg.get("goclaw_api_key", "")
-    model   = cfg.get("goclaw_model", "gpt-4o-mini")
+    base    = cfg.get("llm_proxy_url") or cfg.get("goclaw_url", "").replace("/chat/completions", "").rstrip("/")
+    api_key = cfg.get("llm_proxy_token") or cfg.get("goclaw_api_key", "")
+    model   = cfg.get("llm_proxy_model") or cfg.get("goclaw_model", "gpt-4o-mini")
+    url     = (base.rstrip("/") + "/chat/completions") if base else ""
     if not url:
-        return "AI-консультант не налаштовано."
+        return "AI-консультант не налаштовано. Вкажіть LLM Proxy URL у налаштуваннях."
     system = (
         "Ти — асистент цивільної безпеки для жителів України. "
         "Допомагаєш знайти найближче укриття, пояснюєш правила поведінки під час повітряних тривог. "
@@ -441,6 +521,25 @@ def shelter_ai_query(user_msg: str, context: str) -> str:
         return result["choices"][0]["message"]["content"]
     except Exception as exc:
         return f"Помилка AI: {exc}"
+
+
+def _call_consultant(message: str, session_id: str = "web") -> str | None:
+    """Call RAG consultant service (localhost:8770). Returns reply or None on failure."""
+    import urllib.request as _ureq
+    import json as _json
+    try:
+        payload = _json.dumps({"message": message, "session_id": session_id}).encode()
+        req = _ureq.Request(
+            "http://localhost:8770/chat",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+        )
+        with _ureq.urlopen(req, timeout=30) as r:
+            result = _json.loads(r.read())
+            return result.get("reply") or None
+    except Exception:
+        return None
+
 
 def cf_random_prefix(n=5):
     return "".join(_random.choices(_string.ascii_lowercase, k=n))
@@ -915,6 +1014,7 @@ function _flashScreen() {
   }, 400);
 }
 </script>
+
 </body>
 </html>"""
 
@@ -925,144 +1025,421 @@ HTML = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>UAV Watcher — Налаштування</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #0a0b0e; --surface: #111318; --elevated: #191c23;
-    --border: rgba(255,255,255,0.09); --border2: rgba(255,255,255,0.14);
-    --text: rgba(255,255,255,0.92); --muted: rgba(255,255,255,0.38);
-    --dim: rgba(255,255,255,0.22);
-    --amber: #f59e0b; --red: #ef4444; --green: #22c55e;
-    --font: 'IBM Plex Sans', sans-serif; --mono: 'JetBrains Mono', monospace;
+    /* Stitch: Tactical Operations Terminal palette */
+    --bg: #060810;
+    --surface: #0f172a;
+    --surface-low: #191b24;
+    --elevated: #0b0e16;
+    --border: #1e293b;
+    --border-focus: #38bdf8;
+    --text: #e1e1ee;
+    --muted: #e0c0b1;
+    --dim: #a78b7d;
+    --accent: #f97316;
+    --primary: #ffb690;
+    --blue: #7bd0ff;
+    --red-vivid: #f43f5e;
+    --green: #10b981;
+    --font: 'Barlow Condensed', sans-serif;
+    --mono: 'JetBrains Mono', monospace;
   }
-  body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 13px; min-height: 100vh; padding: 0; }
-  .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; height: 44px; display: flex; align-items: center; gap: 10px; }
-  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--amber); }
-  .topbar-title { font-family: var(--mono); font-size: 12px; font-weight: 600; letter-spacing: 0.1em; }
-  .topbar-sub { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-left: 4px; }
-  .status-pill { margin-left: auto; padding: 3px 10px; border-radius: 20px; font-family: var(--mono); font-size: 10px; font-weight: 600; }
-  .status-pill.ok { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.3); color: var(--green); }
-  .status-pill.err { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); color: var(--red); }
+  body {
+    background-color: var(--bg);
+    background-image: radial-gradient(circle, #1e293b 1px, transparent 1px);
+    background-size: 24px 24px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
 
-  .layout { display: flex; gap: 0; max-width: 1100px; margin: 0 auto; padding: 32px 24px; gap: 24px; align-items: flex-start; }
-  .col-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
-  .col-side { width: 300px; flex-shrink: 0; display: flex; flex-direction: column; gap: 20px; }
+  /* ── TOPBAR ── */
+  .topbar {
+    background: rgba(6,8,16,0.95);
+    border-bottom: 1px solid var(--border-focus);
+    padding: 0 16px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+  }
+  @media (min-width: 640px) { .topbar { padding: 0 24px; gap: 12px; height: 64px; } }
 
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
-  .card-header { padding: 12px 16px 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
-  .card-title { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .dot {
+    width: 14px; height: 14px; flex-shrink: 0; position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .dot::before {
+    content: ''; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent); animation: reticle 2s infinite;
+    position: relative; z-index: 1;
+  }
+  @keyframes reticle {
+    0%   { box-shadow: 0 0 0 0 rgba(249,115,22,0.7); }
+    70%  { box-shadow: 0 0 0 10px rgba(249,115,22,0); }
+    100% { box-shadow: 0 0 0 0 rgba(249,115,22,0); }
+  }
+
+  .topbar-title {
+    font-family: var(--font); font-size: 15px; font-weight: 700;
+    letter-spacing: 0.18em; text-transform: uppercase; color: var(--text);
+    white-space: nowrap;
+  }
+  @media (min-width: 640px) { .topbar-title { font-size: 20px; } }
+
+  .topbar-sub {
+    font-family: var(--mono); font-size: 10px; color: var(--dim);
+    margin-left: 2px; display: none;
+  }
+  @media (min-width: 900px) { .topbar-sub { display: inline; } }
+
+  .status-pill {
+    margin-left: auto; padding: 3px 10px; border-radius: 2px;
+    font-family: var(--mono); font-size: 10px; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; flex-shrink: 0;
+  }
+  .status-pill.ok  { background: rgba(5,46,22,0.6);  border: 1px solid #166534; color: #4ade80; }
+  .status-pill.err { background: rgba(69,10,10,0.6); border: 1px solid #991b1b; color: #fca5a5; }
+
+  /* ── LAYOUT ── */
+  .layout {
+    display: flex; flex-direction: column;
+    max-width: 1200px; margin: 0 auto;
+    padding: 16px; gap: 16px; align-items: stretch;
+  }
+  @media (min-width: 768px) {
+    .layout { flex-direction: row; padding: 24px; align-items: flex-start; }
+  }
+  .col-main { width: 100%; flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+  .col-side  { width: 100%; display: flex; flex-direction: column; gap: 16px; }
+  @media (min-width: 768px) { .col-side { width: 300px; flex-shrink: 0; } }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--accent);
+    border-radius: 2px; overflow: hidden;
+  }
+  .card-header {
+    padding: 11px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(0,0,0,0.22);
+  }
+  .card-title {
+    font-family: var(--font); font-size: 12px; font-weight: 700;
+    letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted);
+  }
   .card-body { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
 
-  label { display: block; font-family: var(--mono); font-size: 10px; font-weight: 500; color: var(--dim); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 5px; }
-  input[type=text], input[type=tel], input[type=password], textarea {
-    width: 100%; padding: 7px 10px; background: var(--elevated);
-    border: 1px solid var(--border); border-radius: 3px;
-    color: var(--text); font-family: var(--mono); font-size: 12px;
-    outline: none; transition: border-color 0.15s;
+  /* ── FORMS ── */
+  label {
+    display: block; font-family: var(--mono); font-size: 9px; font-weight: 600;
+    color: var(--dim); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 5px;
   }
-  input:focus, textarea:focus { border-color: var(--border2); }
-  input::placeholder, textarea::placeholder { color: rgba(255,255,255,0.18); }
+  input[type=text], input[type=tel], input[type=password], textarea {
+    width: 100%; padding: 9px 12px;
+    background: var(--elevated); border: 1px solid var(--border); border-radius: 2px;
+    color: var(--text); font-family: var(--mono); font-size: 16px;
+    outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  @media (min-width: 768px) {
+    input[type=text], input[type=tel], input[type=password], textarea { font-size: 12px; }
+  }
+  input:focus, textarea:focus {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 1px var(--border-focus);
+  }
+  input::placeholder, textarea::placeholder { color: rgba(167,139,125,0.45); }
   textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
 
-  .btn { height: 34px; padding: 0 16px; border-radius: 3px; border: none; font-family: var(--mono); font-size: 11px; font-weight: 600; cursor: pointer; transition: opacity 0.12s; }
-  .btn-primary { background: var(--amber); color: #000; }
+  /* ── BUTTONS ── */
+  .btn {
+    height: 40px; padding: 0 18px; border-radius: 2px; border: none;
+    font-family: var(--font); font-size: 13px; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    cursor: pointer; transition: opacity 0.12s, transform 0.1s, background 0.15s;
+    white-space: nowrap; min-height: 44px;
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn-primary { background: var(--accent); color: #060810; }
   .btn-primary:hover { opacity: 0.88; }
-  .btn-ghost { background: transparent; border: 1px solid var(--border2); color: var(--muted); }
-  .btn-ghost:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
-  .btn-danger { background: transparent; border: 1px solid rgba(239,68,68,0.35); color: var(--red); }
-  .btn-row { display: flex; gap: 8px; align-items: center; }
+  .btn-ghost  { background: transparent; border: 1px solid var(--border-focus); color: var(--border-focus); }
+  .btn-ghost:hover  { background: rgba(56,189,248,0.1); }
+  .btn-danger { background: transparent; border: 1px solid #991b1b; color: #f87171; }
+  .btn-danger:hover { background: rgba(153,27,27,0.15); }
+  .btn-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
-  .hint { font-family: var(--mono); font-size: 10px; color: var(--muted); line-height: 1.6; }
-  .hint a { color: var(--amber); text-decoration: none; }
+  /* ── HINTS ── */
+  .hint { font-family: var(--mono); font-size: 10px; color: var(--dim); line-height: 1.7; }
+  .hint a { color: var(--primary); text-decoration: none; }
   .hint a:hover { text-decoration: underline; }
-  .hint code { background: var(--elevated); padding: 1px 5px; border-radius: 2px; font-size: 10px; }
+  .hint code {
+    background: var(--bg); padding: 1px 5px; border-radius: 1px;
+    font-size: 10px; color: var(--blue); border: 1px solid var(--border);
+  }
 
-  .step-list { display: flex; flex-direction: column; gap: 8px; }
+  /* ── STEPS ── */
+  .step-list { display: flex; flex-direction: column; gap: 10px; }
   .step { display: flex; gap: 10px; align-items: flex-start; }
-  .step-num { width: 20px; height: 20px; border-radius: 50%; background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3); display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 9px; font-weight: 600; color: var(--amber); flex-shrink: 0; margin-top: 1px; }
-  .step-text { font-family: var(--mono); font-size: 11px; color: rgba(255,255,255,0.65); line-height: 1.55; }
-  .step-text code { background: var(--elevated); padding: 1px 5px; border-radius: 2px; color: rgba(180,220,160,0.85); }
+  .step-num {
+    width: 22px; height: 22px; border-radius: 2px;
+    background: rgba(249,115,22,0.15); border: 1px solid rgba(249,115,22,0.35);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 10px; font-weight: 700; color: var(--accent);
+    flex-shrink: 0;
+  }
+  .step-text { font-family: var(--mono); font-size: 11px; color: rgba(225,225,238,0.65); line-height: 1.6; }
+  .step-text a { color: var(--blue); text-decoration: none; }
+  .step-text a:hover { text-decoration: underline; }
+  .step-text code { background: var(--bg); padding: 1px 5px; border-radius: 1px; color: var(--blue); border: 1px solid var(--border); }
 
-  .flash { padding: 10px 14px; border-radius: 3px; font-family: var(--mono); font-size: 11px; margin-bottom: 4px; }
-  .flash.ok { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25); color: var(--green); }
-  .flash.err { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25); color: var(--red); }
+  /* ── FLASH ── */
+  .flash { padding: 10px 14px; border-radius: 2px; font-family: var(--mono); font-size: 11px; margin-bottom: 4px; }
+  .flash.ok  { background: rgba(5,46,22,0.5);  border: 1px solid #166534; color: #4ade80; }
+  .flash.err { background: rgba(69,10,10,0.5); border: 1px solid #991b1b; color: #fca5a5; }
 
+  /* ── MISC ── */
   .separator { height: 1px; background: var(--border); }
-  .tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 2px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); font-family: var(--mono); font-size: 10px; color: var(--dim); }
-  .channel-id { font-family: var(--mono); font-size: 11px; color: rgba(180,220,160,0.75); }
+  .tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 2px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); font-family: var(--mono); font-size: 10px; color: var(--dim); }
+  .channel-id { font-family: var(--mono); font-size: 11px; color: var(--blue); }
 
-  /* ── Channel list ── */
-  .ch-total { font-family: var(--mono); font-size: 10px; color: var(--amber); font-weight: 600; }
+  /* ── CHANNEL LIST ── */
+  .ch-total { font-family: var(--mono); font-size: 10px; color: var(--primary); font-weight: 600; }
   .ch-section { padding: 10px 16px; }
-  .ch-section-label { font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: 0.14em; color: var(--dim); text-transform: uppercase; margin-bottom: 8px; }
+  .ch-section-label { font-family: var(--font); font-size: 10px; font-weight: 700; letter-spacing: 0.16em; color: var(--dim); text-transform: uppercase; margin-bottom: 10px; }
   .ch-divider { height: 1px; background: var(--border); }
-  .ch-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
-  .ch-row:last-child { border-bottom: none; }
-  .ch-locked { opacity: 0.85; }
-  .ch-pulse { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; position: relative; }
-  .ch-pulse::after { content:''; position:absolute; inset:-3px; border-radius:50%; animation: pulse 2.4s ease-in-out infinite; }
-  .ch-pulse-amber { background: var(--amber); }
-  .ch-pulse-amber::after { background: rgba(245,158,11,0.25); }
-  .ch-pulse-green { background: var(--green); }
-  .ch-pulse-green::after { background: rgba(34,197,94,0.2); }
-  @keyframes pulse { 0%,100%{transform:scale(1);opacity:0.5} 50%{transform:scale(2.2);opacity:0} }
-  .ch-info { flex: 1; min-width: 0; }
-  .ch-name { display: block; font-family: var(--mono); font-size: 11px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .ch-handle { display: block; font-family: var(--mono); font-size: 9px; color: var(--dim); margin-top: 1px; }
-  .ch-badge-sys { padding: 2px 7px; border-radius: 2px; background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.3); font-family: var(--mono); font-size: 9px; font-weight: 700; color: var(--amber); letter-spacing: 0.1em; flex-shrink: 0; }
-  .ch-remove { background: none; border: none; color: var(--dim); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 2px; transition: color 0.15s; flex-shrink: 0; }
-  .ch-remove:hover { color: var(--red); }
-  .ch-add-wrap { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
-  .ch-add-row { display: flex; gap: 8px; }
-  .ch-input { flex: 1; min-width: 0; padding: 7px 10px; background: var(--elevated); border: 1px solid var(--border); border-radius: 3px; color: var(--text); font-family: var(--mono); font-size: 11px; outline: none; transition: border-color 0.15s; }
-  .ch-input:focus { border-color: var(--border2); }
-  .ch-input::placeholder { color: rgba(255,255,255,0.18); }
-  .ch-btn { height: 34px; font-size: 10px; }
-  .ch-preview { background: var(--elevated); border: 1px solid var(--border2); border-radius: 3px; padding: 8px 12px; display: flex; align-items: center; gap: 10px; }
-  .ch-preview-name { font-family: var(--mono); font-size: 11px; color: var(--text); flex: 1; }
-  .ch-preview-id { font-family: var(--mono); font-size: 9px; color: var(--dim); }
 
+  .ch-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border: 1px solid var(--border); border-radius: 2px;
+    margin-bottom: 6px; background: var(--bg); transition: border-color 0.15s;
+  }
+  .ch-row:hover { border-color: var(--border-focus); }
+  .ch-row:last-child { margin-bottom: 0; }
+  .ch-locked { opacity: 0.85; }
+
+  /* Stitch-style pulse: box-shadow animation */
+  .ch-pulse { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .ch-pulse-amber { background: var(--accent); animation: pulse-amber 2s infinite; }
+  .ch-pulse-green  { background: var(--green);  animation: pulse-green  2s infinite; }
+  @keyframes pulse-amber { 0%{box-shadow:0 0 0 0 rgba(249,115,22,0.7)} 70%{box-shadow:0 0 0 8px rgba(249,115,22,0)} 100%{box-shadow:0 0 0 0 rgba(249,115,22,0)} }
+  @keyframes pulse-green  { 0%{box-shadow:0 0 0 0 rgba(16,185,129,0.7)} 70%{box-shadow:0 0 0 8px rgba(16,185,129,0)} 100%{box-shadow:0 0 0 0 rgba(16,185,129,0)} }
+
+  .ch-info { flex: 1; min-width: 0; }
+  .ch-name   { display: block; font-family: var(--mono); font-size: 12px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ch-handle { display: block; font-family: var(--mono); font-size: 10px; color: var(--dim); margin-top: 2px; }
+  .ch-badge-sys {
+    padding: 2px 8px; border-radius: 2px;
+    background: rgba(249,115,22,0.15); border: 1px solid rgba(249,115,22,0.35);
+    font-family: var(--font); font-size: 10px; font-weight: 700; color: var(--accent);
+    letter-spacing: 0.14em; flex-shrink: 0; text-transform: uppercase;
+  }
+  .ch-remove {
+    background: none; border: none; color: var(--dim); cursor: pointer;
+    font-size: 16px; line-height: 1; padding: 2px 4px; transition: color 0.15s;
+    flex-shrink: 0; min-width: 36px; min-height: 36px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ch-remove:hover { color: #f87171; }
+  .ch-add-wrap { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .ch-add-row  { display: flex; gap: 8px; }
+  .ch-input {
+    flex: 1; min-width: 0; padding: 9px 12px;
+    background: var(--elevated); border: 1px solid var(--border); border-radius: 2px;
+    color: var(--text); font-family: var(--mono); font-size: 16px;
+    outline: none; transition: border-color 0.15s;
+  }
+  @media (min-width: 768px) { .ch-input { font-size: 12px; } }
+  .ch-input:focus { border-color: var(--border-focus); box-shadow: 0 0 0 1px var(--border-focus); }
+  .ch-input::placeholder { color: rgba(167,139,125,0.45); }
+  .ch-btn { height: 40px; min-height: 44px; font-size: 11px; }
+
+  .ch-preview {
+    background: var(--surface-low); border: 1px solid var(--border-focus);
+    border-radius: 2px; padding: 10px 12px; display: flex; align-items: center; gap: 10px;
+  }
+  .ch-preview-name { font-family: var(--mono); font-size: 12px; color: var(--text); flex: 1; }
+  .ch-preview-id   { font-family: var(--mono); font-size: 10px; color: var(--dim); }
+
+  /* ── DETAILS/SUMMARY ── */
   details { border: none; }
-  details[open] summary { color: var(--amber); }
-  summary.steps-toggle { cursor: pointer; font-family: var(--mono); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); list-style: none; display: flex; align-items: center; gap: 6px; padding: 4px 0; transition: color 0.15s; user-select: none; }
+  details[open] summary { color: var(--primary); }
+  summary.steps-toggle {
+    cursor: pointer; font-family: var(--font); font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.14em; color: var(--dim);
+    list-style: none; display: flex; align-items: center; gap: 6px;
+    padding: 4px 0; transition: color 0.15s; user-select: none;
+  }
   summary.steps-toggle::before { content: '▶'; font-size: 8px; transition: transform 0.2s; display: inline-block; }
   details[open] summary.steps-toggle::before { transform: rotate(90deg); }
-  summary.steps-toggle:hover { color: rgba(255,255,255,0.7); }
-  .test-ok  { background: rgba(34,197,94,0.1);  border: 1px solid rgba(34,197,94,0.25);  color: var(--green); padding: 7px 10px; border-radius: 3px; font-family: var(--mono); font-size: 10px; }
-  .test-err { background: rgba(239,68,68,0.1);  border: 1px solid rgba(239,68,68,0.25);  color: var(--red);   padding: 7px 10px; border-radius: 3px; font-family: var(--mono); font-size: 10px; }
+  summary.steps-toggle:hover { color: var(--text); }
 
-  @media (max-width: 750px) { .layout { flex-direction: column; } .col-side { width: 100%; } }
+  .test-ok  { background: rgba(5,46,22,0.5);  border: 1px solid #166534; color: #4ade80; padding: 8px 12px; border-radius: 2px; font-family: var(--mono); font-size: 10px; }
+  .test-err { background: rgba(69,10,10,0.5); border: 1px solid #991b1b; color: #fca5a5; padding: 8px 12px; border-radius: 2px; font-family: var(--mono); font-size: 10px; }
 
-  /* ── Language selector ── */
-  .lang-sel { display: flex; gap: 2px; margin-left: 10px; }
-  .lang-btn { background: none; border: none; cursor: pointer; font-size: 15px; padding: 1px 3px; border-radius: 3px; opacity: 0.45; transition: opacity 0.15s, transform 0.1s; line-height: 1; }
-  .lang-btn:hover { opacity: 0.9; transform: scale(1.12); }
+  /* ── LANGUAGE SELECTOR ── */
+  .lang-sel {
+    display: flex; gap: 1px; margin-left: 6px;
+    overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+    flex-shrink: 1;
+  }
+  .lang-sel::-webkit-scrollbar { display: none; }
+  .lang-btn {
+    background: none; border: none; cursor: pointer; font-size: 17px;
+    padding: 3px 3px; border-radius: 2px; opacity: 0.35;
+    transition: opacity 0.15s, transform 0.1s; line-height: 1;
+    flex-shrink: 0; min-width: 32px; min-height: 32px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lang-btn:hover { opacity: 0.85; transform: scale(1.1); }
   .lang-btn.active { opacity: 1; }
 
-  /* ── RTL support ── */
-  [dir="rtl"] .layout { flex-direction: row-reverse; flex-wrap: wrap; }
-  [dir="rtl"] .topbar { flex-direction: row-reverse; }
-  [dir="rtl"] .topbar-sub { margin-left: 0; margin-right: 4px; }
-  [dir="rtl"] .lang-sel { margin-left: 0; margin-right: 10px; }
-  [dir="rtl"] .card-header { flex-direction: row-reverse; }
-  [dir="rtl"] .card-body { direction: rtl; }
-  [dir="rtl"] .btn-row { flex-direction: row-reverse; }
-  [dir="rtl"] .step { flex-direction: row-reverse; }
-  [dir="rtl"] .ch-row { flex-direction: row-reverse; }
-  [dir="rtl"] .ch-add-row { flex-direction: row-reverse; }
-  [dir="rtl"] .ch-section { text-align: right; }
-  [dir="rtl"] label { text-align: right; }
+  /* ── RTL ── */
+  [dir="rtl"] .layout { flex-direction: column; }
+  @media (min-width: 768px) { [dir="rtl"] .layout { flex-direction: row-reverse; } }
+  [dir="rtl"] .topbar       { flex-direction: row-reverse; }
+  [dir="rtl"] .lang-sel     { margin-left: 0; margin-right: 6px; }
+  [dir="rtl"] .card-header  { flex-direction: row-reverse; }
+  [dir="rtl"] .card-body    { direction: rtl; }
+  [dir="rtl"] .btn-row      { flex-direction: row-reverse; }
+  [dir="rtl"] .step         { flex-direction: row-reverse; }
+  [dir="rtl"] .ch-row       { flex-direction: row-reverse; }
+  [dir="rtl"] .ch-add-row   { flex-direction: row-reverse; }
+  [dir="rtl"] .ch-section   { text-align: right; }
+  [dir="rtl"] label         { text-align: right; }
   [dir="rtl"] input, [dir="rtl"] textarea { text-align: right; direction: rtl; }
-  [dir="rtl"] .hint { text-align: right; }
-  [dir="rtl"] .step-text { text-align: right; }
-  @media (max-width: 750px) { [dir="rtl"] .layout { flex-direction: column; } }
+  [dir="rtl"] .hint         { text-align: right; }
+  [dir="rtl"] .step-text    { text-align: right; }
+
+  /* ── CHAT TOGGLE BTN ── */
+  .chat-toggle-btn {
+    background: none; border: 1px solid rgba(56,189,248,0.2); border-radius: 2px;
+    color: var(--blue); cursor: pointer; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, border-color 0.15s;
+    height: 36px; width: 36px; flex-shrink: 0;
+  }
+  .chat-toggle-btn:hover { background: rgba(56,189,248,0.1); border-color: var(--blue); }
+  .chat-toggle-btn.active { background: rgba(249,115,22,0.15); border-color: var(--accent); color: var(--accent); }
+
+  /* ── CHAT PANEL ── */
+  .chat-panel {
+    position: fixed; top: 0; right: 0; bottom: 0;
+    width: 380px; background: #0c1018;
+    border-left: 1px solid var(--border-focus);
+    border-top: 2px solid var(--accent);
+    display: flex; flex-direction: column; z-index: 300;
+    transform: translateX(105%);
+    transition: transform 0.28s cubic-bezier(0.2,0,0,1);
+    box-shadow: -4px 0 24px rgba(0,0,0,0.5);
+  }
+  @media (max-width: 640px) {
+    .chat-panel {
+      width: 100%; top: auto; height: 72vh;
+      border-left: none; border-top: 2px solid var(--accent);
+      transform: translateY(105%);
+      transition: transform 0.28s cubic-bezier(0.2,0,0,1);
+    }
+    .chat-panel.open { transform: translateY(0); }
+  }
+  @media (min-width: 641px) { .chat-panel.open { transform: translateX(0); } }
+
+  .chat-header {
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(0,0,0,0.25); flex-shrink: 0;
+  }
+  .chat-header-icon { color: var(--accent); display: flex; }
+  .chat-header-title {
+    font-family: var(--font); font-size: 12px; font-weight: 700;
+    letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); flex: 1;
+  }
+  .chat-header-sub { font-family: var(--mono); font-size: 9px; color: var(--dim); }
+  .chat-close {
+    background: none; border: none; color: var(--dim); cursor: pointer;
+    font-size: 14px; padding: 6px 8px; border-radius: 2px; line-height: 1;
+    min-width: 32px; min-height: 32px; display: flex; align-items: center; justify-content: center;
+    transition: color 0.15s;
+  }
+  .chat-close:hover { color: var(--text); }
+
+  .chat-messages {
+    flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px;
+    scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+  }
+  .chat-msg {
+    max-width: 88%; padding: 10px 13px; border-radius: 2px;
+    font-family: var(--mono); font-size: 11px; line-height: 1.65;
+  }
+  .chat-msg-user {
+    background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.22);
+    color: var(--primary); align-self: flex-end;
+  }
+  .chat-msg-bot {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); align-self: flex-start; white-space: pre-wrap;
+  }
+  .chat-msg-bot strong { color: #fff; font-weight: 600; }
+  .chat-msg-title {
+    font-family: var(--font); font-size: 11px; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent);
+    margin-bottom: 6px; display: block;
+  }
+
+  .chat-chips {
+    padding: 8px 12px 4px; display: flex; flex-wrap: wrap; gap: 5px;
+    border-top: 1px solid var(--border); flex-shrink: 0; background: rgba(0,0,0,0.1);
+  }
+  .chat-chip {
+    font-family: var(--font); font-size: 10px; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 5px 9px; border-radius: 2px; border: none;
+    background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.2);
+    color: var(--blue); cursor: pointer; transition: background 0.15s, transform 0.1s;
+    white-space: nowrap;
+  }
+  .chat-chip:hover  { background: rgba(56,189,248,0.16); }
+  .chat-chip:active { transform: scale(0.96); }
+
+  .chat-input-row {
+    display: flex; gap: 8px; padding: 10px 12px;
+    border-top: 1px solid var(--border); flex-shrink: 0;
+  }
+  .chat-text-input {
+    flex: 1; padding: 9px 12px; background: var(--elevated);
+    border: 1px solid var(--border); border-radius: 2px;
+    color: var(--text); font-family: var(--mono); font-size: 16px; outline: none;
+    transition: border-color 0.15s;
+  }
+  @media (min-width: 768px) { .chat-text-input { font-size: 12px; } }
+  .chat-text-input:focus { border-color: var(--border-focus); }
+  .chat-text-input::placeholder { color: rgba(167,139,125,0.4); }
+  .chat-send-btn { height: 40px; width: 44px; padding: 0; font-size: 15px; min-height: 44px; flex-shrink: 0; }
+
+  /* Overlay backdrop on mobile */
+  .chat-backdrop {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 299;
+  }
+  .chat-backdrop.show { display: block; }
 </style>
 </head>
 <body>
 <div class="topbar">
-  <div class="dot"></div>
+  <button class="chat-toggle-btn" onclick="toggleChat()" id="chat-toggle-btn" title="Консультант">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  </button>
+    <div class="dot"></div>
   <span class="topbar-title" data-i18n="title">UAV WATCHER</span>
   <span class="topbar-sub" data-i18n="subtitle">— система моніторингу БПЛА-загроз</span>
   <span class="status-pill {status_class}" data-state="{status_class}" data-i18n-state="status">{status_text}</span>
@@ -1250,6 +1627,30 @@ HTML = """<!DOCTYPE html>
       </div>
     </div>
 
+
+    <!-- LLM PROXY SETTINGS -->
+    <div class="card">
+      <div class="card-header"><span class="card-title">&#129302; AI Proxy — LLM налаштування</span></div>
+      <div class="card-body">
+        <div class="hint" style="margin-bottom:12px">OpenAI-сумісний проксі для AI-консультанта. Вкажіть базову URL (без <code>/chat/completions</code>).</div>
+        <form method="POST" action="/save-llm">
+          <div class="field-group">
+            <label class="field-label">Proxy URL</label>
+            <input class="input" name="llm_proxy_url" value="{llm_proxy_url}" placeholder="https://openai-proxy.exodus.pp.ua/v1">
+          </div>
+          <div class="field-group">
+            <label class="field-label">API Token</label>
+            <input class="input" type="password" name="llm_proxy_token" value="{llm_proxy_token}" placeholder="your-token (або freecc для публічного проксі)">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Model</label>
+            <input class="input" name="llm_proxy_model" value="{llm_proxy_model}" placeholder="gpt-4o-mini">
+          </div>
+          <button type="submit" class="btn btn-primary">&#10003; Зберегти AI налаштування</button>
+        </form>
+      </div>
+    </div>
+
     <!-- BOT TOKEN -->
     <div class="card">
       <div class="card-header"><span class="card-title" data-i18n="card_bot">🤖 Telegram Bot — сповіщувач</span></div>
@@ -1324,7 +1725,7 @@ HTML = """<!DOCTYPE html>
               <button class="btn btn-ghost" style="height:34px;font-size:18px;padding:0 10px" onclick="tunGenPrefix()" title="Згенерувати">⚂</button>
             </div>
           </div>
-          <div class="hint" style="margin-bottom:8px">URL: <code id="tun-preview" style="color:var(--amber)">?????-alert.exodus.pp.ua</code></div>
+          <div class="hint" style="margin-bottom:8px">URL: <code id="tun-preview" style="color:var(--accent)">?????-alert.exodus.pp.ua</code></div>
           <div id="tun-check-res" style="display:none;margin-bottom:8px"></div>
           <div class="btn-row" style="margin-bottom:4px">
             <button class="btn btn-primary" style="height:30px;font-size:10px" onclick="tunStart()" id="tun-start-btn" data-i18n="btn_tunnel_start">Запустити тунель</button>
@@ -1339,7 +1740,7 @@ HTML = """<!DOCTYPE html>
             <div id="tun-qr" style="display:inline-block;background:#fff;padding:8px;border-radius:4px"></div>
           </div>
           <div style="text-align:center;margin-bottom:10px;word-break:break-all">
-            <a id="tun-url-link" href="#" target="_blank" style="font-family:var(--mono);font-size:10px;color:var(--amber);text-decoration:none" id="tun-url-display"></a>
+            <a id="tun-url-link" href="#" target="_blank" style="font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none" id="tun-url-display"></a>
           </div>
           <button class="btn btn-danger" style="height:30px;font-size:10px;width:100%" onclick="tunStop()" data-i18n="btn_tunnel_stop">Зупинити тунель</button>
         </div>
@@ -1554,6 +1955,69 @@ async function tunLoadStatus() {
     }
   } catch(e) { console.error('tunLoadStatus', e); }
 }
+
+// ── CHAT CONSULTANT ──────────────────────────────────────────────────────────
+let _chatOpen = false;
+const _CHAT_WELCOME = `👋 Привіт! Я консультант UAV Watcher.\n\nОбери тип загрози нижче або задай питання — я поясню що робити.`;
+
+function toggleChat() {
+  _chatOpen = !_chatOpen;
+  const panel = document.getElementById('chat-panel');
+  const btn   = document.getElementById('chat-toggle-btn');
+  const bdrop = document.getElementById('chat-backdrop');
+  panel.classList.toggle('open', _chatOpen);
+  btn.classList.toggle('active', _chatOpen);
+  bdrop.classList.toggle('show', _chatOpen);
+  if (_chatOpen) {
+    if (document.getElementById('chat-messages').children.length === 0) {
+      _chatAddMsg('bot', '', _CHAT_WELCOME);
+    }
+    setTimeout(function(){ document.getElementById('chat-input').focus(); }, 320);
+  }
+}
+
+function _chatAddMsg(role, title, text) {
+  var msgs = document.getElementById('chat-messages');
+  var div  = document.createElement('div');
+  div.className = 'chat-msg chat-msg-' + role;
+  if (title) {
+    var t = document.createElement('span');
+    t.className = 'chat-msg-title';
+    t.textContent = title;
+    div.appendChild(t);
+  }
+  var body = document.createElement('span');
+  body.innerHTML = text.replace(/\*([^*]+)\*/g, '<strong>$1</strong>');
+  div.appendChild(body);
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+async function sendChat() {
+  var inp = document.getElementById('chat-input');
+  var q   = inp.value.trim();
+  if (!q) return;
+  inp.value = '';
+  _chatAddMsg('user', '', q);
+  document.getElementById('chat-chips').style.display = 'none';
+  try {
+    var r = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({q: q})
+    });
+    var d = await r.json();
+    _chatAddMsg('bot', d.title || '', d.text || d.error || 'Помилка');
+  } catch(e) {
+    _chatAddMsg('bot', '', "Помилка з\'єднання. Спробуй ще раз.");
+  }
+}
+
+function sendChip(text) {
+  document.getElementById('chat-input').value = text;
+  sendChat();
+}
+
 tunLoadStatus();
 
 // ── i18n ─────────────────────────────────────────────────────────────────────
@@ -1871,6 +2335,36 @@ function switchLang(lang) { applyLang(lang); }
   applyLang(saved || (avail.indexOf(bl) >= 0 ? bl : 'uk'));
 })();
 </script>
+
+<div class="chat-backdrop" id="chat-backdrop" onclick="toggleChat()"></div>
+<div id="chat-panel" class="chat-panel">
+  <div class="chat-header">
+    <span class="chat-header-icon">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    </span>
+    <span class="chat-header-title">Консультант</span>
+    <span class="chat-header-sub">UAV WATCHER</span>
+    <button class="chat-close" onclick="toggleChat()">✕</button>
+  </div>
+  <div class="chat-messages" id="chat-messages"></div>
+  <div class="chat-chips" id="chat-chips">
+    <button class="chat-chip" onclick="sendChip('БПЛА дрон')">🚁 БПЛА</button>
+    <button class="chat-chip" onclick="sendChip('Балістична ракета')">🚀 Балістика</button>
+    <button class="chat-chip" onclick="sendChip('Крилата ракета')">✈️ Крилата</button>
+    <button class="chat-chip" onclick="sendChip('FAB авіабомба')">💣 FAB</button>
+    <button class="chat-chip" onclick="sendChip('Хімічна загроза')">☣️ Хімічна</button>
+    <button class="chat-chip" onclick="sendChip('Під завалами')">🆘 Завали</button>
+    <button class="chat-chip" onclick="sendChip('Паніка заспокоїтись')">😰 Паніка</button>
+    <button class="chat-chip" onclick="sendChip('Відбій тривоги')">✅ Відбій</button>
+    <button class="chat-chip" onclick="sendChip('Де ховатись укриття')">🏠 Укриття</button>
+    <button class="chat-chip" onclick="sendChip('Телефони екстрені')">📞 Телефони</button>
+  </div>
+  <div class="chat-input-row">
+    <input class="chat-text-input" id="chat-input" type="text" placeholder="Запитай про загрозу..."
+      onkeydown="if(event.key==='Enter')sendChat()">
+    <button class="btn btn-primary chat-send-btn" onclick="sendChat()">▶</button>
+  </div>
+</div>
 </body>
 </html>"""
 
@@ -1926,7 +2420,10 @@ class Handler(BaseHTTPRequestHandler):
             "notify_chat_id": str(cfg.get("notify_chat_id", "")),
             "bot_token": cfg.get("bot_token", ""),
             "channel_count": str(len(cfg.get("channels", []))),
-            "model": cfg.get("goclaw_model", ""),
+            "model": cfg.get("llm_proxy_model") or cfg.get("goclaw_model", ""),
+            "llm_proxy_url": (cfg.get("llm_proxy_url") or cfg.get("goclaw_url", "").replace("/chat/completions", "")).rstrip("/"),
+            "llm_proxy_token": cfg.get("llm_proxy_token") or cfg.get("goclaw_api_key", ""),
+            "llm_proxy_model": cfg.get("llm_proxy_model") or cfg.get("goclaw_model", ""),
             "user_channels_html": user_channels_html,
             "user_channel_count": str(len(user_chs)),
             "channel_total": str(len(user_chs) + len(LOCKED_CHANNELS)),
@@ -2118,9 +2615,26 @@ class Handler(BaseHTTPRequestHandler):
                 if not user_msg:
                     self.send_json({"ok": False, "error": "message required"}, 400)
                     return
-                reply = shelter_ai_query(user_msg, context)
+                session_id = payload.get("session_id", "web")
+                reply = _call_consultant(user_msg, session_id)
+                if not reply:
+                    reply = shelter_ai_query(user_msg, context)
                 self.send_json({"ok": True, "reply": reply})
                 return
+
+            if path == "/api/chat":
+                q = payload.get("q", "").strip()
+                if not q:
+                    self.send_json({"ok": False, "error": "q required"}, 400)
+                    return
+                session_id = payload.get("session_id", "web-chat")
+                consultant_reply = _call_consultant(q, session_id)
+                if consultant_reply:
+                    self.send_json({"ok": True, "reply": consultant_reply})
+                else:
+                    self.send_json(chat_match(q))
+                return
+
 
             if path == "/tunnel-check":
                 import re as _re2
@@ -2236,6 +2750,18 @@ class Handler(BaseHTTPRequestHandler):
                 cfg["bot_token"] = get("bot_token")
                 save_config(cfg)
                 self.redirect(flash="✓ Bot token збережено")
+
+            elif path == "/save-llm":
+                base_url = get("llm_proxy_url").strip().rstrip("/")
+                cfg["llm_proxy_url"]   = base_url
+                cfg["llm_proxy_token"] = get("llm_proxy_token").strip()
+                cfg["llm_proxy_model"] = get("llm_proxy_model").strip() or "gpt-4o-mini"
+                # Keep goclaw_* in sync for backward compat with classifier
+                cfg["goclaw_url"]      = base_url + "/chat/completions" if base_url else ""
+                cfg["goclaw_api_key"]  = cfg["llm_proxy_token"]
+                cfg["goclaw_model"]    = cfg["llm_proxy_model"]
+                save_config(cfg)
+                self.redirect(flash="✓ AI Proxy налаштування збережено")
 
             elif path == "/restart":
                 ok, msg = restart_service()
