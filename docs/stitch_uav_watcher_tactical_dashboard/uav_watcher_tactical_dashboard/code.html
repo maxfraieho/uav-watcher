@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>UAV WATCHER - Configuration Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-primary": "#9d4300",
+                        "on-secondary-container": "#00374d",
+                        "on-secondary-fixed-variant": "#004c69",
+                        "primary-fixed-dim": "#ffb690",
+                        "surface": "#11131c",
+                        "on-tertiary-container": "#283345",
+                        "secondary-container": "#00a6e0",
+                        "inverse-surface": "#e1e1ee",
+                        "on-primary-fixed-variant": "#783200",
+                        "on-tertiary": "#263143",
+                        "secondary-fixed": "#c4e7ff",
+                        "on-surface": "#e1e1ee",
+                        "surface-container-lowest": "#0b0e16",
+                        "on-tertiary-fixed": "#111c2d",
+                        "surface-container-high": "#272a33",
+                        "tertiary-fixed-dim": "#bcc7de",
+                        "tertiary": "#bcc7de",
+                        "surface-container-low": "#191b24",
+                        "secondary-fixed-dim": "#7bd0ff",
+                        "on-tertiary-fixed-variant": "#3c475a",
+                        "on-secondary-fixed": "#001e2c",
+                        "surface-variant": "#32343e",
+                        "on-primary-container": "#582200",
+                        "error-container": "#93000a",
+                        "secondary": "#7bd0ff",
+                        "surface-dim": "#11131c",
+                        "surface-bright": "#373942",
+                        "inverse-on-surface": "#2e3039",
+                        "on-primary": "#552100",
+                        "surface-tint": "#ffb690",
+                        "outline": "#a78b7d",
+                        "surface-container": "#1d1f28",
+                        "tertiary-container": "#909bb1",
+                        "on-secondary": "#00354a",
+                        "primary-container": "#f97316",
+                        "primary-fixed": "#ffdbca",
+                        "on-error": "#690005",
+                        "on-surface-variant": "#e0c0b1",
+                        "primary": "#ffb690",
+                        "error": "#ffb4ab",
+                        "tertiary-fixed": "#d8e3fb",
+                        "on-primary-fixed": "#341100",
+                        "on-background": "#e1e1ee",
+                        "background": "#11131c",
+                        "outline-variant": "#584237",
+                        "on-error-container": "#ffdad6",
+                        "surface-container-highest": "#32343e"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "16px",
+                        "sidebar-width": "300px",
+                        "margin-page": "24px",
+                        "topbar-height": "64px",
+                        "unit": "8px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["JetBrains Mono"],
+                        "display-lg": ["Barlow Condensed"],
+                        "button": ["Barlow Condensed"],
+                        "headline-md": ["Barlow Condensed"],
+                        "body-md": ["JetBrains Mono"],
+                        "headline-lg": ["Barlow Condensed"],
+                        "data-tabular": ["JetBrains Mono"],
+                        "label-sm": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["16px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "display-lg": ["48px", { "lineHeight": "1.1", "letterSpacing": "0.02em", "fontWeight": "700" }],
+                        "button": ["14px", { "lineHeight": "1", "letterSpacing": "0.1em", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "1.2", "fontWeight": "600" }],
+                        "body-md": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "0.02em", "fontWeight": "700" }],
+                        "data-tabular": ["13px", { "lineHeight": "1.4", "letterSpacing": "-0.01em", "fontWeight": "500" }],
+                        "label-sm": ["11px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #060810;
+            background-image: radial-gradient(circle, #1e293b 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+        .tactical-card {
+            background-color: #0f172a;
+            border: 1px solid #1e293b;
+            border-top: 2px solid #f97316;
+            border-radius: 2px;
+        }
+        .tactical-input {
+            background-color: #060810;
+            border: 1px solid #1e293b;
+            color: #e1e1ee;
+            border-radius: 2px;
+        }
+        .tactical-input:focus {
+            border-color: #38bdf8;
+            outline: none;
+            box-shadow: 0 0 0 1px #38bdf8;
+        }
+        .btn-ember {
+            background-color: #f97316;
+            color: #060810;
+            border-radius: 2px;
+            text-transform: uppercase;
+        }
+        .btn-ghost {
+            border: 1px solid #38bdf8;
+            color: #38bdf8;
+            background: transparent;
+            border-radius: 2px;
+            text-transform: uppercase;
+        }
+        .btn-ghost:hover {
+            background-color: rgba(56, 189, 248, 0.1);
+        }
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #f97316;
+            animation: pulse 2s infinite;
+        }
+        .pulse-dot.green {
+            background-color: #10b981;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(249, 115, 22, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
+        }
+    </style>
+</head>
+<body class="text-on-background font-body-md min-h-screen flex flex-col">
+<!-- TopNavBar -->
+<nav class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-gutter h-topbar-height bg-background/95 backdrop-blur-sm border-b border-secondary-container border-b-[#38bdf8] bg-background dark:bg-background">
+<div class="flex items-center gap-4">
+<div class="pulse-dot"></div>
+<div class="text-headline-lg font-headline-lg font-bold tracking-widest text-on-background dark:text-on-background uppercase">UAV WATCHER</div>
+<div class="hidden md:flex text-on-surface-variant text-sm ml-4 items-center gap-2">
+<span class="w-8 h-px bg-surface-variant"></span>
+<span class="uppercase tracking-widest">система моніторингу БПЛА-загроз</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 bg-emerald-900/30 text-emerald-400 px-3 py-1 rounded-sm border border-emerald-800 text-label-sm font-button">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                ЗАПУЩЕНО
+            </div>
+<div class="flex gap-2 text-xl cursor-default">
+<span>🇺🇦</span>
+<span class="opacity-50">🇬🇧</span>
+<span class="opacity-50">🇩🇪</span>
+<span class="opacity-50">🇫🇷</span>
+<span class="opacity-50">🇵🇱</span>
+</div>
+<button class="text-primary dark:text-primary hover:bg-surface-variant/20 transition-colors p-2 rounded">
+<span class="material-symbols-outlined">language</span>
+</button>
+</div>
+</nav>
+<!-- Main Layout -->
+<main class="flex-1 mt-topbar-height p-margin-page flex flex-col md:flex-row gap-gutter max-w-7xl mx-auto w-full">
+<!-- Left Column: Main Content -->
+<div class="flex-1 flex flex-col gap-gutter">
+<!-- Card 1: MONITORING CITY -->
+<div class="tactical-card p-6 flex flex-col gap-4">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-secondary-container">map</span>
+<h2 class="text-headline-md font-headline-md text-on-surface uppercase">МІСТО МОНІТОРИНГУ</h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="flex flex-col gap-1">
+<label class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">НАЗВА МІСТА</label>
+<input class="tactical-input p-2 text-body-md font-body-md w-full" type="text" value="Олександрія"/>
+</div>
+<div class="flex flex-col gap-1">
+<label class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">ОБЛАСТЬ</label>
+<input class="tactical-input p-2 text-body-md font-body-md w-full" type="text" value="Кіровоградська область"/>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<label class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">КЛЮЧОВІ СЛОВА (ЧЕРЕЗ КОМУ)</label>
+<input class="tactical-input p-2 text-body-md font-body-md w-full" type="text" value="Олександрія, Олександрійськ, Олексан"/>
+<p class="text-xs text-on-surface-variant mt-1 opacity-70">Слова для попередньої фільтрації - якщо жодне не знайдено в тексті, АІ не викликається.</p>
+</div>
+<button class="btn-ember font-button text-button py-2 px-6 w-max mt-2">ЗБЕРЕГТИ</button>
+</div>
+<!-- Card 2: MONITORING CHANNELS -->
+<div class="tactical-card p-6 flex flex-col gap-4">
+<div class="flex justify-between items-center mb-2">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary-container">satellite_alt</span>
+<h2 class="text-headline-md font-headline-md text-on-surface uppercase">КАНАЛИ МОНІТОРИНГУ</h2>
+</div>
+<span class="text-primary text-label-sm font-label-sm">6 активних</span>
+</div>
+<div class="flex flex-col gap-3">
+<div class="text-label-sm font-label-sm text-on-surface-variant flex items-center gap-2 uppercase">
+<span class="material-symbols-outlined text-sm">lock</span>
+                        СИСТЕМНИЙ - ЗАВЖДИ АКТИВНИЙ
+                    </div>
+<div class="flex items-center justify-between p-3 bg-surface border border-surface-variant rounded-sm hover:border-[#38bdf8] transition-colors">
+<div class="flex items-center gap-3">
+<div class="pulse-dot"></div>
+<div>
+<div class="font-body-md text-on-surface">Повітряні Сили ЗС України</div>
+<div class="text-xs text-on-surface-variant">@kpszsu · -1001223955273</div>
+</div>
+</div>
+<span class="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-sm border border-primary/30 uppercase">SYSTEM</span>
+</div>
+<div class="text-label-sm font-label-sm text-on-surface-variant flex items-center gap-2 uppercase mt-4">
+<span class="material-symbols-outlined text-sm">folder_open</span>
+                        ВАШІ КАНАЛИ <span class="opacity-50">5</span>
+</div>
+<!-- Channel Item -->
+<div class="flex items-center justify-between p-3 bg-surface border border-surface-variant rounded-sm hover:border-[#38bdf8] transition-colors">
+<div class="flex items-center gap-3">
+<div class="pulse-dot green"></div>
+<div>
+<div class="font-body-md text-on-surface">Оригінальний канал</div>
+<div class="text-xs text-on-surface-variant">-1002187970584</div>
+</div>
+</div>
+<button class="text-on-surface-variant hover:text-error transition-colors"><span class="material-symbols-outlined text-sm">close</span></button>
+</div>
+<!-- Add Channel Input -->
+<div class="flex gap-2 mt-2">
+<input class="tactical-input p-2 text-body-md font-body-md flex-1" placeholder="@username або -1001234567890" type="text"/>
+<button class="btn-ghost font-button text-button py-2 px-4 whitespace-nowrap">ПЕРЕВІРИТИ</button>
+</div>
+<p class="text-xs text-on-surface-variant opacity-70">Знайти ID каналу: відкрий web.telegram.org -&gt; будь-який канал -&gt; число в URL після <code class="bg-surface-variant px-1 rounded">-100</code>. Або напиши <span class="text-primary">@userinfobot</span> і перешли повідомлення з каналу.</p>
+</div>
+</div>
+<!-- Card 3: TELEGRAM CREDENTIALS -->
+<div class="tactical-card p-6 flex flex-col gap-4">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-secondary-container">key</span>
+<h2 class="text-headline-md font-headline-md text-on-surface uppercase">TELEGRAM USER BOT (TELETHON)</h2>
+</div>
+<div class="flex flex-col gap-4 text-body-md">
+<div class="flex gap-3">
+<span class="bg-surface-variant text-on-surface-variant w-6 h-6 flex items-center justify-center rounded-sm text-xs font-bold shrink-0 border border-[#1e293b]">1</span>
+<p>Відкрий <a class="text-secondary hover:underline" href="#">my.telegram.org/apps</a>, увійди під своїм номером телефону</p>
+</div>
+<div class="flex gap-3">
+<span class="bg-surface-variant text-on-surface-variant w-6 h-6 flex items-center justify-center rounded-sm text-xs font-bold shrink-0 border border-[#1e293b]">2</span>
+<p>Створи додаток (або використай існуючий). Скопіюй <code class="bg-surface px-1 border border-surface-variant rounded text-secondary text-sm">App api_id</code> і <code class="bg-surface px-1 border border-surface-variant rounded text-secondary text-sm">App api_hash</code></p>
+</div>
+<div class="flex gap-3">
+<span class="bg-primary/20 text-primary w-6 h-6 flex items-center justify-center rounded-sm text-xs font-bold shrink-0 border border-primary/30">3</span>
+<p>Введи дані нижче — це телефон і ключі того Telegram-акаунту, від якого читатимуться канали</p>
+</div>
+</div>
+<div class="flex flex-col gap-3 mt-2">
+<div class="flex flex-col gap-1">
+<label class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">НОМЕР ТЕЛЕФОНУ</label>
+<input class="tactical-input p-2 text-body-md font-body-md w-full" type="text" value="+380916180482"/>
+</div>
+<div class="flex flex-col gap-1">
+<label class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">API ID</label>
+<input class="tactical-input p-2 text-body-md font-body-md w-full" type="text" value="32870082"/>
+</div>
+<div class="flex flex-col gap-1">
+<label class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">API HASH</label>
+<input class="tactical-input p-2 text-body-md font-body-md w-full" type="text" value="cc075aeb0f9e5040e4b4d11a06772c7d"/>
+</div>
+</div>
+<div class="flex items-center gap-4 mt-2">
+<button class="btn-ember font-button text-button py-2 px-6">ЗБЕРЕГТИ</button>
+<p class="text-xs text-on-surface-variant opacity-70">Після збереження потрібно запустити <code class="bg-surface-variant px-1 rounded text-secondary">python3 auth.py</code> в терміналі для авторизації сесії</p>
+</div>
+</div>
+</div>
+<!-- Right Column: Sidebar (Fixed Width) -->
+<aside class="w-full md:w-sidebar-width shrink-0 flex flex-col gap-gutter">
+<!-- Sidebar Card 1: NOTIFICATIONS -->
+<div class="tactical-card p-5 flex flex-col gap-4">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-secondary-container">notifications</span>
+<h2 class="text-headline-md font-headline-md text-on-surface uppercase">КУДИ НАДСИЛАТИ СПОВІЩЕННЯ</h2>
+</div>
+<p class="text-xs text-on-surface-variant">Сповіщення надходять у твій особистий чат із ботом. Потрібно спочатку <strong>відкрити свого бота в Telegram і натиснути /start</strong> — без цього кроку бот не зможе писати тобі.</p>
+<div class="flex flex-col gap-3 text-sm">
+<div class="flex gap-2">
+<span class="text-primary shrink-0 border border-primary/30 w-5 h-5 flex items-center justify-center rounded-sm text-[10px]">1</span>
+<p class="text-xs text-on-surface-variant">Знайди свого бота... <code class="text-secondary bg-surface px-1">/start</code></p>
+</div>
+<div class="flex gap-2">
+<span class="text-primary shrink-0 border border-primary/30 w-5 h-5 flex items-center justify-center rounded-sm text-[10px]">2</span>
+<p class="text-xs text-on-surface-variant">Дізнайся свій User ID... <code class="text-secondary bg-surface px-1">/start</code></p>
+</div>
+</div>
+<div class="flex flex-col gap-1 mt-2">
+<label class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">NOTIFY CHAT ID (ТВІЙ TELEGRAM USER ID)</label>
+<input class="tactical-input p-2 text-body-md font-body-md w-full" type="text" value="6412868393"/>
+</div>
+<button class="btn-ember font-button text-button py-2 px-4 w-full">ЗБЕРЕГТИ CHAT ID</button>
+</div>
+<!-- Sidebar Card 2: SERVICE CONTROL -->
+<div class="tactical-card p-5 flex flex-col gap-4">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-secondary-container">settings_suggest</span>
+<h2 class="text-headline-md font-headline-md text-on-surface uppercase">СЕРВІС</h2>
+</div>
+<button class="btn-ghost font-button text-button py-2 px-4 w-full flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">refresh</span>
+                    ПЕРЕЗАПУСТИТИ СЕРВІС
+                </button>
+<p class="text-xs text-on-surface-variant opacity-70">Після зміни конфігурації або каналів - перезапусти сервіс.</p>
+<div class="bg-surface border border-surface-variant p-3 rounded-sm text-xs font-data-tabular mt-2 flex flex-col gap-1">
+<div class="flex justify-between"><span class="text-on-surface-variant">Поточний стан:</span></div>
+<div class="flex justify-between"><span class="text-on-surface-variant">City:</span> <span class="text-secondary">Олександрія</span></div>
+<div class="flex justify-between"><span class="text-on-surface-variant">Channels:</span> <span class="text-secondary">5</span></div>
+<div class="flex justify-between"><span class="text-on-surface-variant">Model:</span> <span class="text-secondary">docs-assistant-proxy</span></div>
+</div>
+</div>
+<!-- Sidebar Card 3: TELEGRAM BOT -->
+<div class="tactical-card p-5 flex flex-col gap-4">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-secondary-container">smart_toy</span>
+<h2 class="text-headline-md font-headline-md text-on-surface uppercase">TELEGRAM BOT - СПОВІЩУВАЧ</h2>
+</div>
+<div class="flex flex-col gap-1 mt-2">
+<label class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">BOT TOKEN</label>
+<input class="tactical-input p-2 text-body-md font-body-md w-full" type="password" value="8660277592:AAEFzH9fq4jM81gyHd"/>
+</div>
+<div class="flex gap-2">
+<button class="btn-ember font-button text-button py-2 px-4 flex-1">ЗБЕРЕГТИ</button>
+<button class="btn-ghost font-button text-button py-2 px-4 flex items-center justify-center gap-1">
+<span class="material-symbols-outlined text-sm">play_arrow</span> ТЕСТ
+                    </button>
+</div>
+</div>
+<!-- Sidebar Card 4: PUBLIC ACCESS -->
+<div class="tactical-card p-5 flex flex-col gap-4">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-secondary-container">hub</span>
+<h2 class="text-headline-md font-headline-md text-on-surface uppercase">ПУБЛІЧНИЙ ДОСТУП</h2>
+</div>
+<div class="flex items-center gap-2 text-xs">
+<div class="pulse-dot green"></div>
+<span class="text-on-surface-variant">Тунель активний</span>
+</div>
+<div class="bg-surface border border-surface-variant p-4 rounded-sm flex flex-col items-center gap-4">
+<!-- Placeholder for QR Code, using div pattern for brevity -->
+<div class="w-32 h-32 bg-white flex flex-wrap content-start p-1" style="background-image: repeating-linear-gradient(45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000), repeating-linear-gradient(45deg, #000 25%, #fff 25%, #fff 75%, #000 75%, #000); background-position: 0 0, 4px 4px; background-size: 8px 8px;"></div>
+<a class="text-secondary text-xs hover:underline break-all text-center" href="#">https://gofhd-alert.exodus.pp.ua</a>
+</div>
+<button class="border border-error text-error hover:bg-error/10 font-button text-button py-2 px-4 w-full rounded-sm transition-colors">ЗУПИНИТИ ТУНЕЛЬ</button>
+</div>
+</aside>
+</main>
+</body></html>

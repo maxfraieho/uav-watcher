@@ -1,4 +1,9 @@
-"""Situation watchdog — polls alerts.in.ua every 60s, writes situation_context.json."""
+"""Situation watchdog — polls alerts.in.ua every 60s, writes situation_context.json.
+
+Requires an API token from alerts.in.ua (free registration):
+  https://alerts.in.ua — sign up and get a token.
+Set it in config.json as: {"alerts_in_ua_token": "your-token"}
+"""
 import json
 import logging
 import pathlib
@@ -21,15 +26,29 @@ _REGION_NAMES = {
     "Khmelnytska": "Хмельницька", "Zhytomyrska": "Житомирська", "Rivnenska": "Рівненська",
     "Volynska": "Волинська", "Ivano-Frankivska": "Івано-Франківська",
     "Zakarpatska": "Закарпатська", "Chernivtska": "Чернівецька",
-    "Cherkaška": "Черкаська", "Kirovohradska": "Кіровоградська", "Ternopilska": "Тернопільська",
+    "Cherkaska": "Черкаська", "Kirovohradska": "Кіровоградська", "Ternopilska": "Тернопільська",
 }
 
 
-def _fetch_situation() -> dict:
-    """Fetch active alerts from alerts.in.ua."""
+def _get_token(project_root: pathlib.Path) -> str:
+    try:
+        cfg = json.loads((project_root / "config.json").read_text(encoding="utf-8"))
+        return cfg.get("alerts_in_ua_token", "")
+    except Exception:
+        return ""
+
+
+def _fetch_situation(project_root: pathlib.Path) -> dict:
+    """Fetch active alerts from alerts.in.ua (requires API token)."""
+    token = _get_token(project_root)
+    if not token:
+        return {}  # No token configured — skip silently
     try:
         with httpx.Client(timeout=10.0) as client:
-            resp = client.get(ALERTS_API, headers={"User-Agent": "UAVWatcher/2.0"})
+            resp = client.get(
+                ALERTS_API,
+                headers={"User-Agent": "UAVWatcher/2.0", "X-API-Key": token},
+            )
             resp.raise_for_status()
             data = resp.json()
     except Exception as e:
@@ -88,14 +107,18 @@ def read_situation(project_root: pathlib.Path) -> str:
 
 
 def start_watcher(project_root: pathlib.Path) -> threading.Thread:
-    """Start background polling thread."""
+    """Start background polling thread. Requires alerts_in_ua_token in config.json."""
     ctx_path = project_root / "situation_context.json"
 
     def _loop():
         log.info("[watchdog] Situation watcher started (alerts.in.ua, 60s interval)")
+        token = _get_token(project_root)
+        if not token:
+            log.info("[watchdog] No alerts_in_ua_token in config.json — polling disabled. "
+                     "Get a free token at https://alerts.in.ua")
         while True:
             try:
-                data = _fetch_situation()
+                data = _fetch_situation(project_root)
                 if data:
                     _write_context(ctx_path, data)
                     log.info(f"[watchdog] {data.get('summary', '')}")
