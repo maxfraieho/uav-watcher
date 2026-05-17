@@ -241,6 +241,11 @@ async def main():
     await bot_app.start(bot_token=cfg['bot_token'])
     log.info("Bot command handlers started.")
 
+    # --- FAMILY HANDLERS (Task 1.2) ---
+    from family.bot_handlers import register_family_handlers
+    register_family_handlers(bot_app, cfg)
+    log.info("Family bot handlers registered.")
+
     await asyncio.gather(
         client.run_until_disconnected(),
         bot_app.run_until_disconnected()
