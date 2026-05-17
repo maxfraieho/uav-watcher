@@ -168,7 +168,53 @@ async def main():
             log.warning(f"Could not join {ch_id}: {e}")
 
     log.info(f"UAV watcher started. Watching {len(channels)} channel(s). Press Ctrl+C to stop.")
-    await client.run_until_disconnected()
+
+    # --- CRISIS CHATBOT BOT COMMANDS (Task 0.1) ---
+    from bot.crisis_templates import TEMPLATES, THREAT_KEYBOARD, GROUNDING_STEPS
+    from telethon.tl.types import KeyboardButtonCallback
+
+    bot_app = TelegramClient(
+        os.path.join(os.path.dirname(__file__), "bot"),
+        int(os.environ["TELEGRAM_API_ID"]),
+        os.environ["TELEGRAM_API_HASH"]
+    )
+
+    @bot_app.on(events.NewMessage(pattern='/help|/допомога|/що_робити'))
+    async def cmd_help(event):
+        buttons = [
+            [KeyboardButtonCallback(b["text"], b["callback_data"].encode()) for b in row]
+            for row in THREAT_KEYBOARD
+        ]
+        await event.respond(
+            "🛡 *UAV Watcher — Кризовий консультант*\n\nОберіть тип загрози:",
+            buttons=buttons,
+            parse_mode='md'
+        )
+
+    @bot_app.on(events.CallbackQuery(pattern=b'crisis_(.+)'))
+    async def handle_crisis_callback(event):
+        threat_key = event.data.decode().replace('crisis_', '')
+        if threat_key in TEMPLATES:
+            await event.edit(TEMPLATES[threat_key]["text"], parse_mode='md')
+        await event.answer()
+
+    @bot_app.on(events.NewMessage(pattern='/заземлення|/calm|/паніка'))
+    async def cmd_grounding(event):
+        await event.respond(
+            "🧘 *Техніка заземлення — зупинись і читай повільно:*\n\nЦе допоможе тобі повернутись у теперішній момент.",
+            parse_mode='md'
+        )
+        for step in GROUNDING_STEPS:
+            await asyncio.sleep(8)
+            await event.respond(step)
+
+    await bot_app.start(bot_token=cfg['bot_token'])
+    log.info("Bot command handlers started.")
+
+    await asyncio.gather(
+        client.run_until_disconnected(),
+        bot_app.run_until_disconnected()
+    )
 
 
 if __name__ == "__main__":
