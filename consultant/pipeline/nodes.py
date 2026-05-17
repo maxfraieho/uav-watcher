@@ -57,8 +57,65 @@ FAB/КАБ — тільки спеціальне сховище ДСНС або 
 - Немає конкретних даних — скажи чесно: "За останній час тривог не зафіксовано. Актуально в реальному часі: @air_alert_ua або alerts.in.ua"
 - Ніяких вигаданих таблиць або рівнів загроз — тільки те що є в контексті.
 
+Психологічні стани — адаптуй відповідь:
+[ПАНІКА] Людина пише ВЕЛИКИМИ ЛІТЕРАМИ, "???", "!!!", коротко і уривчасто.
+  → Якірна фраза (1 речення) + одна мікро-команда. НЕ БІЛЬШЕ. "Стисни кулаки. Різко відпусти. Відчуй руки."
+[СТУПОР] Мовчання, ".", "ок", ігнорує — тільки Так/Ні питання + мікрозавдання.
+  → "Ти зараз сидиш? Напиши 1 якщо так."
+[ДИСОЦІАЦІЯ] Про побутові дрібниці під час вибухів, нереалістичне — спочатку тілесне.
+  → "Стоп. Назви 3 речі, які бачиш прямо зараз."
+[СУЇЦИДАЛЬНИЙ РИЗИК] "Хай прилетить", прощання, "нікому не потрібен", відмова в укриття.
+  → Визнай біль ("Чую тебе."), одне питання, дай 7333 — Lifeline Ukraine. НЕ заперечуй.
+
+Стоп-фрази — НІКОЛИ не писати:
+- "Все буде добре." → Пиши: "Ти впорався. Найгірше позаду."
+- "Заспокойся." → Пиши: "Я бачу, що страшно. Це нормально."
+- "Не плач." → Пиши: "Плакати — правильно. Це скидає стрес."
+- "Іншим гірше." → Замовчи і заземли.
+
 Екстрені: 101 (ДСНС), 102 (поліція), 103 (швидка), 112
+Психологічна криза: 7333 (Lifeline, цілодобово)
 """
+
+
+
+def detect_crisis_state(text: str) -> str | None:
+    """Heuristic state detection from message text patterns."""
+    t = text.strip()
+    tl = t.lower()
+
+    # Suicidal risk — highest priority
+    suicidal_markers = [
+        "хай прилетить", "хай вже прилетить", "не хочу жити",
+        "нікому не потрібен", "нікому не потрібна", "прощавайте",
+        "прощай всі", "до побачення назавжди", "все одно помру",
+        "однаково все", "сенсу нема жити", "не вийду з укриття",
+    ]
+    if any(m in tl for m in suicidal_markers):
+        return "СУЇЦИДАЛЬНИЙ РИЗИК"
+
+    # Stupor — very short or single-char responses
+    if len(t) <= 3 and t not in ("101", "112", "103", "102"):
+        return "СТУПОР"
+
+    # Dissociation — mundane requests during crisis context
+    dissoc_markers = [
+        "чайник вимкнути", "ціна на хліб", "де купити",
+        "що подивитись", "рецепт", "погода завтра",
+    ]
+    if any(m in tl for m in dissoc_markers):
+        return "ДИСОЦІАЦІЯ"
+
+    # Panic — caps + exclamations/questions + short + repetition
+    caps_ratio = sum(1 for c in t if c.isupper()) / max(len(t), 1)
+    has_panic_punct = t.count("!") >= 2 or t.count("?") >= 2
+    words = tl.split()
+    has_repetition = len(words) != len(set(words)) and len(words) >= 4
+
+    if caps_ratio > 0.4 or (has_panic_punct and len(t) < 80) or has_repetition:
+        return "ПАНІКА"
+
+    return None
 
 # Cached proxy config — re-read from config.json at most every 30s
 _proxy_cfg_cache: tuple[str, str, str] | None = None
@@ -161,7 +218,14 @@ def generate(state: CrisisState) -> dict:
     else:
         user_content = state["query"]
 
-    msgs = [{"role": "system", "content": SYSTEM_PROMPT}]
+    # Detect user's psychological state and hint to LLM
+    raw_query = state["query"]
+    crisis_state = detect_crisis_state(raw_query)
+    system_content = SYSTEM_PROMPT
+    if crisis_state:
+        system_content = SYSTEM_PROMPT + f"\n\n[УВАГА: Виявлено стан — {crisis_state}. Адаптуй тон і формат відповіді відповідно.]"
+
+    msgs = [{"role": "system", "content": system_content}]
     for msg in history[-6:]:
         if hasattr(msg, "type"):
             role = "user" if msg.type == "human" else "assistant"
@@ -175,6 +239,10 @@ def generate(state: CrisisState) -> dict:
         reply = _llm_call(msgs)
     except Exception:
         reply = _format_offline(state.get("kb_context", ""), state["query"])
+
+    # Guarantee crisis line for suicidal state
+    if crisis_state == "СУЇЦИДАЛЬНИЙ РИЗИК" and "7333" not in reply:
+        reply = reply.rstrip() + "\n\nЯкщо дуже важко — зателефонуй: 7333 (Lifeline, цілодобово)."
 
     return {
         "reply": reply,
