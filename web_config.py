@@ -2105,6 +2105,26 @@ function toggleChat() {
   }
 }
 
+function _mdToHtml(s) {
+  // strip meta-label lines and hallucinated URLs the LLM may echo
+  s = s.replace(/^\s*[\u{1F4DA}\u{2139}]?\s*\[[^\]]+\][\s:]*(?:https?:\/\/\S+)?\s*$/umg, '').trim();
+  s = s.replace(/^\s*\[[^\]]+\][\s:]*(?:https?:\/\/\S+)?\s*$/mg, '').trim();
+  // strip bare URLs on their own line
+  s = s.replace(/^\s*https?:\/\/\S+\s*$/mg, '').trim();
+  // escape HTML to prevent XSS
+  s = s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // ### / ## / # headers -> bold
+  s = s.replace(/^#{1,3}\s+(.+)$/gm, '<strong>$1</strong>');
+  // **bold**
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  // *text* -> italic
+  s = s.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+  // list items: "- text" at line start -> bullet
+  s = s.replace(/^-\s+(.+)$/gm, '• $1');
+  // paragraph breaks and newlines
+  s = s.replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>');
+  return s;
+}
 function _chatAddMsg(role, title, text) {
   var msgs = document.getElementById('chat-messages');
   var div  = document.createElement('div');
@@ -2116,7 +2136,11 @@ function _chatAddMsg(role, title, text) {
     div.appendChild(t);
   }
   var body = document.createElement('span');
-  body.innerHTML = text.replace(/[*]([^*]+)[*]/g, '<strong>$1</strong>');
+  if (role === 'bot') {
+    body.innerHTML = _mdToHtml(text);
+  } else {
+    body.textContent = text;
+  }
   div.appendChild(body);
   msgs.appendChild(div);
   msgs.scrollTop = msgs.scrollHeight;
