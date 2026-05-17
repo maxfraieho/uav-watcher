@@ -12,6 +12,7 @@ import math as _math
 import urllib.request
 import urllib.parse as _urllib_parse
 from http.server import BaseHTTPRequestHandler, HTTPServer, ThreadingHTTPServer
+import threading
 from urllib.parse import parse_qs, urlparse
 
 _shelter_cache: dict = {}   # {city_key: {"ts": float, "shelters": list}}
@@ -109,11 +110,14 @@ def load_config():
         return json.load(f)
 
 
+_CONFIG_LOCK = threading.Lock()
+
 def save_config(cfg: dict):
     tmp = CONFIG_PATH + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(cfg, f, ensure_ascii=False, indent=2)
-    os.replace(tmp, CONFIG_PATH)
+    with _CONFIG_LOCK:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, CONFIG_PATH)
 
 
 def load_env() -> dict:
