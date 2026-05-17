@@ -12,6 +12,7 @@ import re
 import httpx
 from dotenv import load_dotenv
 from telethon import TelegramClient, events
+from geo_monitor import build_pattern_from_locations
 
 load_dotenv()
 logging.basicConfig(
@@ -185,10 +186,35 @@ async def main():
         region_word = region_word[:-1]
     default_region_kw = [region_word] if region_word else []
     region_keywords = cfg.get("region_keywords", default_region_kw)
-    region_pattern = re.compile(
-        "|".join(re.escape(k) for k in (keywords + region_keywords)),
-        re.IGNORECASE
+    # DB path for location check-ins (same dir as session file)
+    _db_path = os.path.join(os.path.dirname(__file__), "data", "families.db")
+
+    # Initial static pattern (fallback before Overpass loads)
+    _kw_all = [k for k in (keywords + (region_keywords or [])) if k]
+    _static_pattern = re.compile(
+        "|".join(re.escape(k) for k in _kw_all) if _kw_all else r"\bx\B",
+        re.IGNORECASE | re.UNICODE,
     )
+    # Mutable container — async tasks update _pattern_ref[0]
+    _pattern_ref = [_static_pattern]
+
+    async def _refresh_pattern():
+        """Rebuild region pattern from all active family member GPS positions."""
+        try:
+            new_pat = await build_pattern_from_locations(_db_path, _kw_all)
+            _pattern_ref[0] = new_pat
+            log.info("Region pattern refreshed from live locations")
+        except Exception as exc:
+            log.error(f"Region pattern refresh error: {exc}")
+
+    async def _periodic_refresh():
+        """Refresh region pattern every 30 minutes."""
+        while True:
+            await asyncio.sleep(1800)
+            await _refresh_pattern()
+
+    def region_pattern_search(text: str) -> bool:
+        return bool(_pattern_ref[0].search(text))
 
     ai_sem = asyncio.Semaphore(1)
 
@@ -197,7 +223,7 @@ async def main():
         text = event.message.text or ""
         if not text:
             return
-        if not region_pattern.search(text):
+        if not region_pattern_search(text):
             return
         log.info(f"Keyword matched, AI check: {text[:100]}...")
         async with ai_sem:
@@ -220,6 +246,10 @@ async def main():
                 log.info(f"Joined channel: {getattr(entity, 'title', ch_id)}")
         except Exception as e:
             log.warning(f"Could not join {ch_id}: {e}")
+
+    # Initial region pattern refresh from DB locations
+    await _refresh_pattern()
+    asyncio.create_task(_periodic_refresh())
 
     log.info(f"UAV watcher started. Watching {len(channels)} channel(s). Press Ctrl+C to stop.")
 
