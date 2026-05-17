@@ -4,6 +4,11 @@ import pathlib
 import time
 import httpx
 from langchain_core.messages import HumanMessage, AIMessage
+# Ensure consultant/ dir is on path so situation_watcher is importable from anywhere
+import pathlib as _pathlib, sys as _sys
+_CONSULTANT_DIR = str(_pathlib.Path(__file__).parent.parent)
+if _CONSULTANT_DIR not in _sys.path:
+    _sys.path.insert(0, _CONSULTANT_DIR)
 from situation_watcher import read_situation
 from .states import CrisisState
 
@@ -58,6 +63,12 @@ FAB/КАБ — тільки спеціальне сховище ДСНС або 
 - Ніяких вигаданих таблиць або рівнів загроз — тільки те що є в контексті.
 
 Психологічні стани — адаптуй відповідь:
+[АКТИВНА ЗАГРОЗА] Людина чує або бачить БПЛА поруч, повідомляє про вибух чи пряму небезпеку.
+  → НЕ ПСИХОЛОГІЯ — ТІЛЬКИ ТАКТИКА. Без зволікань:
+  "Ти в будівлі чи надворі?"
+  Якщо в будівлі: "Йди зараз — кімната без вікон, дві стіни між тобою і вулицею. Ляж на підлогу."
+  Якщо надворі: "Ляж. Між будь-яким укриттям. Відвернись від напряму звуку."
+  Тільки після безпеки — коротко про стрес (1 речення).
 [ПАНІКА] Людина пише ВЕЛИКИМИ ЛІТЕРАМИ, "???", "!!!", коротко і уривчасто.
   → Якірна фраза (1 речення) + одна мікро-команда. НЕ БІЛЬШЕ. "Стисни кулаки. Різко відпусти. Відчуй руки."
 [СТУПОР] Мовчання, ".", "ок", ігнорує — тільки Так/Ні питання + мікрозавдання.
@@ -84,6 +95,17 @@ def detect_crisis_state(text: str) -> str | None:
     t = text.strip()
     tl = t.lower()
 
+    # Active UAV/explosion nearby — tactical emergency, overrides all other states
+    active_threat_markers = [
+        "чую бпла", "чую дрон", "чую шахед", "чую ракет",
+        "над нами", "над будинком", "бачу бпла", "бачу дрон",
+        "летить над", "близько бпла", "бпла близько",
+        "зовсім близько", "вже близько", "вибух поруч",
+        "прилетіло", "влучило поруч",
+    ]
+    if any(m in tl for m in active_threat_markers):
+        return "АКТИВНА ЗАГРОЗА"
+
     # Suicidal risk — highest priority
     suicidal_markers = [
         "хай прилетить", "хай вже прилетить", "не хочу жити",
@@ -94,8 +116,10 @@ def detect_crisis_state(text: str) -> str | None:
     if any(m in tl for m in suicidal_markers):
         return "СУЇЦИДАЛЬНИЙ РИЗИК"
 
-    # Stupor — very short or single-char responses
-    if len(t) <= 3 and t not in ("101", "112", "103", "102"):
+    # Stupor — very short, but exclude common conversational one-word replies
+    _conversational = {"ні", "так", "ок", "да", "нє", "не", "га", "ой", "ай", "хм", "ну", "й"}
+    _norm = tl.rstrip(".,!? ")
+    if len(t) <= 3 and t not in ("101", "112", "103", "102") and _norm not in _conversational:
         return "СТУПОР"
 
     # Dissociation — mundane requests during crisis context
@@ -169,9 +193,18 @@ def _format_offline(kb_context: str, query: str) -> str:
 
 
 def retrieve_kb(state: CrisisState) -> dict:
-    from knowledge_base.retrieval import retrieve_text
-    kb = retrieve_text(state["query"], top_k=3)
+    query = state["query"]
     situation = read_situation(_PROJECT_ROOT)
+    crisis_state = detect_crisis_state(query)
+
+    # For non-crisis queries, skip KB to avoid psychological crisis content bias
+    if crisis_state is None:
+        if situation:
+            return {"kb_context": "Поточна ситуація:\n" + situation}
+        return {"kb_context": ""}
+
+    from knowledge_base.retrieval import retrieve_text
+    kb = retrieve_text(query, top_k=3)
     if situation:
         kb = "Поточна ситуація з тривогами:\n" + situation + "\n\n" + kb
     return {"kb_context": kb}

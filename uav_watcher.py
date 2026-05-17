@@ -377,6 +377,36 @@ async def main():
                 json={'chat_id': cfg['notify_chat_id'], 'text': msg, 'parse_mode': 'Markdown'}
             )
 
+    CORRECTIONS_PATH = os.path.join(os.path.dirname(__file__), "consultant", "knowledge", "corrections.md")
+
+    @bot_app.on(events.NewMessage(pattern=r'^/correct\s+(.*)'))
+    async def cmd_correct(event):
+        """Save a Sharon response correction to the KB."""
+        import datetime
+        correction_text = event.pattern_match.group(1).strip()
+        if not correction_text:
+            await event.respond("Використання: /correct <правильна відповідь>")
+            return
+        # Extract context from replied-to message if available
+        context_note = ""
+        if event.is_reply:
+            replied = await event.get_reply_message()
+            if replied and replied.text:
+                context_note = f"Помилкова відповідь: {replied.text[:300]}\n"
+        ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+        entry = (
+            f"\n## Виправлення {ts}\n"
+            f"{context_note}"
+            f"Правильно: {correction_text}\n"
+        )
+        try:
+            with open(CORRECTIONS_PATH, "a", encoding="utf-8") as cf:
+                cf.write(entry)
+            await event.respond(f"\u2705 Збережено в базу знань.")
+            log.info(f"Correction saved: {correction_text[:80]}")
+        except Exception as ex:
+            await event.respond(f"\u274c Помилка: {ex}")
+
     await bot_app.start(bot_token=cfg['bot_token'])
     log.info("Bot command handlers started.")
 

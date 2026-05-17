@@ -1580,12 +1580,12 @@ HTML = """<!DOCTYPE html>
         <div class="ch-section">
           <div class="ch-section-label" data-i18n="sys_channel_label">🔒 СИСТЕМНИЙ — ЗАВЖДИ АКТИВНИЙ</div>
           <div class="ch-row ch-locked">
-            <span class="ch-pulse ch-pulse-amber"></span>
+            <span class="ch-pulse ch-pulse-green"></span>
             <div class="ch-info">
               <span class="ch-name">Повітряні Сили ЗС України</span>
               <span class="ch-handle">@kpszsu · -1001223955273</span>
             </div>
-            <span class="ch-badge-sys">SYSTEM</span>
+            <span class="ch-badge-sys" title="Системний канал — завжди активний, не видаляється">SYSTEM ✓</span>
           </div>
         </div>
 
@@ -2181,7 +2181,11 @@ async function sendChat() {
     var r = await fetch('/api/chat', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({q: q})
+      body: JSON.stringify({q: q, session_id: (function(){
+        var sid = localStorage.getItem('sharon_sid');
+        if (!sid) { sid = 'web-' + Math.random().toString(36).slice(2,10); localStorage.setItem('sharon_sid', sid); }
+        return sid;
+      })()})
     });
     var d = await r.json();
     typing.remove();
