@@ -80,7 +80,7 @@ SYSTEM_PROMPT = """Ти — кризовий консультант систем
 ## Використання бази знань
 
 Якщо в [База знань] є релевантний розділ — спирайся на нього.
-Якщо база знань порожня або нерелевантна — відповідай з власних знань про цивільну безпеку в Україні.
+Якщо база знань порожня або нерелевантна — відповідай з власних знань про цивільну безпеки в Україні.
 НЕ вигадуй факти. Якщо не знаєш — скажи прямо і дай екстрений номер.
 """
 
@@ -112,6 +112,24 @@ def _llm_call(messages: list[dict]) -> str:
         return resp.json()["choices"][0]["message"]["content"]
 
 
+def _format_offline(kb_context: str, query: str) -> str:
+    """Fallback when LLM API unavailable — returns formatted KB sections directly."""
+    if not kb_context:
+        return (
+            "⚠️ Немає зв'язку з AI. "
+            "Дані за запитом не знайдено.\n\n"
+            "\U0001f4de Екстрені: 101 (ДСНС), 102 (поліція), 103 (швидка), 112"
+        )
+    preview = kb_context[:800].strip()
+    if len(kb_context) > 800:
+        preview += "..."
+    return (
+        "\U0001f4da [Офлайн-режим] База знань:\n\n"
+        + preview
+        + "\n\n\U0001f4de Екстрені: 101, 102, 103, 112"
+    )
+
+
 def retrieve_kb(state: CrisisState) -> dict:
     from knowledge_base.retrieval import retrieve_text
     return {"kb_context": retrieve_text(state["query"], top_k=3)}
@@ -135,7 +153,10 @@ def generate(state: CrisisState) -> dict:
             msgs.append({"role": role, "content": msg.get("content", "")})
 
     msgs.append({"role": "user", "content": user_content})
-    reply = _llm_call(msgs)
+    try:
+        reply = _llm_call(msgs)
+    except Exception:
+        reply = _format_offline(state.get("kb_context", ""), state["query"])
 
     return {
         "reply": reply,
