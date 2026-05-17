@@ -8,9 +8,13 @@ import json
 import os
 import re
 import subprocess
+import math as _math
 import urllib.request
+import urllib.parse as _urllib_parse
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import parse_qs, urlparse
+
+_shelter_cache: dict = {}   # {city_key: {"ts": float, "shelters": list}}
 
 LOCKED_CHANNELS = {
     -1001223955273: {"title": "Повітряні Сили ЗС України", "username": "kpszsu", "id": -1001223955273}
@@ -211,9 +215,369 @@ def tunnel_stop():
         pass
 
 
+
+def _haversine(lat1, lon1, lat2, lon2):
+    R = 6_371_000
+    p1, p2 = _math.radians(lat1), _math.radians(lat2)
+    dp, dl = _math.radians(lat2 - lat1), _math.radians(lon2 - lon1)
+    a = _math.sin(dp / 2) ** 2 + _math.cos(p1) * _math.cos(p2) * _math.sin(dl / 2) ** 2
+    return R * 2 * _math.atan2(_math.sqrt(a), _math.sqrt(1 - a))
+
+
+def geocode_city(city: str):
+    """Return (lat, lon) for a city via Nominatim, or (None, None)."""
+    try:
+        q   = _urllib_parse.urlencode({"q": f"{city}, Ukraine", "format": "json", "limit": "1"})
+        req = urllib.request.Request(
+            f"https://nominatim.openstreetmap.org/search?{q}",
+            headers={"User-Agent": "UAVWatcher/1.0 (shelter-lookup)"},
+        )
+        with urllib.request.urlopen(req, timeout=10) as r:
+            data = json.loads(r.read())
+        if data:
+            return float(data[0]["lat"]), float(data[0]["lon"])
+    except Exception:
+        pass
+    return None, None
+
+
+def query_shelters(lat: float, lon: float, radius: int = 3000) -> list:
+    """Query Overpass API for public shelters near (lat, lon)."""
+    import time
+    cache_key = f"{lat:.4f},{lon:.4f}"
+    cached = _shelter_cache.get(cache_key)
+    if cached and time.time() - cached["ts"] < 3600:
+        return cached["shelters"]
+
+    overpass_q = (
+        f"[out:json][timeout:30];"
+        f"("
+        f"  node[\"amenity\"=\"shelter\"](around:{radius},{lat},{lon});"
+        f"  node[\"shelter_type\"~\".\"](around:{radius},{lat},{lon});"
+        f"  node[\"civil_protection\"=\"shelter\"](around:{radius},{lat},{lon});"
+        f"  node[\"emergency\"=\"shelter\"](around:{radius},{lat},{lon});"
+        f"  node[\"building\"=\"basement\"][\"access\"=\"yes\"](around:{radius},{lat},{lon});"
+        f");"
+        f"out body;"
+    )
+    body = _urllib_parse.urlencode({"data": overpass_q}).encode()
+    try:
+        req = urllib.request.Request(
+            "https://overpass-api.de/api/interpreter",
+            data=body,
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded",
+                "User-Agent":   "UAVWatcher/1.0 (shelter-lookup)",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=30) as r:
+            result = json.loads(r.read())
+    except Exception as exc:
+        return [{"error": str(exc)}]
+
+    shelters = []
+    for el in result.get("elements", []):
+        slat = el.get("lat", 0)
+        slon = el.get("lon", 0)
+        dist = int(_haversine(lat, lon, slat, slon))
+        tags = el.get("tags", {})
+        name = (
+            tags.get("name")
+            or tags.get("shelter_type")
+            or tags.get("civil_protection")
+            or "Укриття"
+        )
+        addr = (tags.get("addr:street", "") + " " + tags.get("addr:housenumber", "")).strip()
+        shelters.append({
+            "dist":    dist,
+            "name":    name,
+            "addr":    addr or tags.get("description", ""),
+            "type":    tags.get("shelter_type", tags.get("civil_protection", "public")),
+            "lat":     slat,
+            "lon":     slon,
+            "osm_id":  el.get("id"),
+        })
+    shelters.sort(key=lambda x: x["dist"])
+    shelters = shelters[:8]
+    _shelter_cache[cache_key] = {"ts": time.time(), "shelters": shelters}
+    return shelters
+
+
+def get_bot_info() -> tuple:
+    """Return (username, t.me/username) from Telegram getMe, or (None, None)."""
+    cfg   = load_config()
+    token = cfg.get("bot_token", "")
+    if not token:
+        return None, None
+    try:
+        url = f"https://api.telegram.org/bot{token}/getMe"
+        with urllib.request.urlopen(url, timeout=8) as r:
+            data = json.loads(r.read())
+        if data.get("ok"):
+            uname = data["result"].get("username", "")
+            if uname:
+                return uname, f"https://t.me/{uname}"
+    except Exception:
+        pass
+    return None, None
+
+
+def shelter_ai_query(user_msg: str, context: str) -> str:
+    """Ask goclaw about shelters and safety. Returns AI reply text."""
+    cfg     = load_config()
+    url     = cfg.get("goclaw_url", "")
+    api_key = cfg.get("goclaw_api_key", "")
+    model   = cfg.get("goclaw_model", "gpt-4o-mini")
+    if not url:
+        return "AI-консультант не налаштовано."
+    system = (
+        "Ти — асистент цивільної безпеки для жителів України. "
+        "Допомагаєш знайти найближче укриття, пояснюєш правила поведінки під час повітряних тривог. "
+        "Якщо є список укриттів — використовуй їх у відповіді. "
+        "Рівні загрози: БАЛІСТИКА/РАКЕТИ — КРИТИЧНИЙ (підземне укриття негайно). "
+        "ДРОНИ — ВИСОКИЙ (укриття або внутрішні кімнати). "
+        "АРТИЛЕРІЯ — СЕРЕДНІЙ (укриття, подалі від вікон). "
+        "ЗАГАЛЬНА ТРИВОГА — СЕРЕДНІЙ. Давай конкретні, практичні поради."
+    )
+    body = json.dumps({
+        "model":    model,
+        "messages": [
+            {"role": "system",  "content": system},
+            {"role": "user",    "content": f"{context}\n\n{user_msg}"},
+        ],
+        "max_tokens": 600,
+    }, ensure_ascii=False).encode()
+    try:
+        req = urllib.request.Request(url, data=body, headers={
+            "Content-Type":  "application/json",
+            "Authorization": f"Bearer {api_key}",
+            "User-Agent":    "curl/7.88.1",
+        })
+        with urllib.request.urlopen(req, timeout=30) as r:
+            result = json.loads(r.read())
+        return result["choices"][0]["message"]["content"]
+    except Exception as exc:
+        return f"Помилка AI: {exc}"
+
 def cf_random_prefix(n=5):
     return "".join(_random.choices(_string.ascii_lowercase, k=n))
 
+
+SHARE_HTML = """<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UAV Watcher — Укриття & Тривоги</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}
+.topbar{background:#1e293b;padding:12px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #334155}
+.logo{font-size:22px}
+.site-title{font-weight:700;font-size:1.05rem;color:#f8fafc}
+.city-badge{margin-left:auto;background:#0ea5e9;color:#fff;border-radius:20px;padding:3px 12px;font-size:.78rem}
+.container{max-width:600px;margin:0 auto;padding:16px}
+.card{background:#1e293b;border-radius:12px;padding:16px;margin-bottom:14px;border:1px solid #334155}
+.card-title{font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;margin-bottom:10px}
+.status-row{display:flex;align-items:center;gap:8px}
+.dot{width:10px;height:10px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.status-text{font-size:.95rem;color:#e2e8f0}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:none;border-radius:8px;padding:11px 18px;font-size:.95rem;font-weight:600;cursor:pointer;transition:opacity .15s}
+.btn:hover{opacity:.85}
+.btn-tg{background:#0088cc;color:#fff;width:100%}
+.btn-geo{background:#334155;color:#e2e8f0;width:100%}
+.btn-send{background:#0ea5e9;color:#fff;padding:9px 16px}
+.tg-note{font-size:.8rem;color:#94a3b8;margin-top:8px;text-align:center}
+.shelter-list{list-style:none;margin-top:8px}
+.shelter-item{background:#0f172a;border-radius:8px;padding:10px 12px;margin-bottom:6px;display:flex;gap:10px;align-items:flex-start}
+.shelter-dist{background:#334155;border-radius:6px;padding:2px 8px;font-size:.78rem;white-space:nowrap;color:#94a3b8;margin-top:2px}
+.shelter-name{font-weight:600;font-size:.9rem;margin-bottom:2px}
+.shelter-addr{font-size:.78rem;color:#94a3b8}
+.shelter-map{font-size:.78rem;color:#38bdf8;text-decoration:none;display:inline-block;margin-top:3px}
+.no-shelter{color:#f59e0b;font-size:.88rem;padding:8px 0}
+.chat-messages{max-height:280px;overflow-y:auto;margin-bottom:10px;display:flex;flex-direction:column;gap:8px}
+.msg{padding:9px 12px;border-radius:8px;font-size:.88rem;line-height:1.45}
+.msg-user{background:#1d4ed8;align-self:flex-end;max-width:85%;border-radius:8px 8px 2px 8px}
+.msg-ai{background:#334155;align-self:flex-start;max-width:85%;border-radius:8px 8px 8px 2px}
+.chat-input-row{display:flex;gap:8px}
+.chat-input{flex:1;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;padding:9px 12px;font-size:.88rem;resize:none}
+.chat-input:focus{outline:none;border-color:#0ea5e9}
+.loading{color:#94a3b8;font-size:.8rem;text-align:center;padding:6px}
+.threat-hint{font-size:.78rem;color:#64748b;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <span class="logo">&#9889;</span>
+  <div>
+    <div class="site-title">UAV Watcher</div>
+  </div>
+  <span class="city-badge" id="cityBadge">{{CITY}}</span>
+</div>
+<div class="container">
+
+  <!-- Status card -->
+  <div class="card">
+    <div class="card-title">Статус моніторингу</div>
+    <div class="status-row">
+      <div class="dot"></div>
+      <div class="status-text">Активний · {{CHANNEL_COUNT}} каналів відслідковується</div>
+    </div>
+  </div>
+
+  <!-- Telegram card -->
+  <div class="card">
+    <div class="card-title">Отримувати сповіщення</div>
+    <button class="btn btn-tg" id="tgBtn" onclick="connectTg()">
+      &#9992;&#65039; Підключити Telegram бот
+    </button>
+    <p class="tg-note" id="tgNote"></p>
+  </div>
+
+  <!-- Shelter card -->
+  <div class="card">
+    <div class="card-title">&#127968; Найближчі укриття</div>
+    <button class="btn btn-geo" id="geoBtn" onclick="findShelters()">
+      &#128205; Визначити місцезнаходження
+    </button>
+    <ul class="shelter-list" id="shelterList"></ul>
+  </div>
+
+  <!-- AI chat card -->
+  <div class="card">
+    <div class="card-title">&#129302; AI-консультант (безпека)</div>
+    <div class="chat-messages" id="chatMessages">
+      <div class="msg msg-ai">Вітаю! Я можу допомогти знайти найближче укриття та пояснити правила поведінки під час тривоги. Спитайте мене про безпеку або натисніть кнопку визначення місця &#8593;</div>
+    </div>
+    <div class="chat-input-row">
+      <textarea class="chat-input" id="chatInput" rows="2" placeholder="Запитайте про укриття, тривогу..."></textarea>
+      <button class="btn btn-send" onclick="sendChat()">&#10148;</button>
+    </div>
+    <div class="threat-hint">БАЛІСТИКА = критичний рівень · ДРОНИ = високий · АРТИЛЕРІЯ = середній</div>
+  </div>
+
+</div>
+<script>
+let _shelterContext = '';
+
+async function connectTg() {
+  const btn = document.getElementById('tgBtn');
+  const note = document.getElementById('tgNote');
+  btn.disabled = true;
+  btn.textContent = 'Завантаження...';
+  try {
+    const r = await fetch('/api/bot-info');
+    const d = await r.json();
+    if (d.username) {
+      btn.textContent = '@' + d.username;
+      btn.onclick = () => window.open(d.url + '?start=subscribe', '_blank');
+      note.textContent = 'Натисніть кнопку, потім надішліть /start боту щоб отримувати сповіщення';
+    } else {
+      btn.textContent = 'Бот не налаштований';
+    }
+  } catch(e) {
+    btn.textContent = 'Помилка з\'єднання';
+  }
+}
+
+async function findShelters() {
+  const btn = document.getElementById('geoBtn');
+  const list = document.getElementById('shelterList');
+  btn.disabled = true;
+  btn.textContent = '⏳ Визначення...';
+  list.innerHTML = '';
+
+  if (!navigator.geolocation) {
+    list.innerHTML = '<li class="no-shelter">Geolocation не підтримується браузером</li>';
+    btn.disabled = false; btn.textContent = '📍 Визначити місцезнаходження';
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const lat = pos.coords.latitude;
+    const lon = pos.coords.longitude;
+    btn.textContent = `📍 ${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+    try {
+      const r  = await fetch('/api/shelter', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({lat, lon})
+      });
+      const d = await r.json();
+      if (!d.shelters || d.shelters.length === 0) {
+        list.innerHTML = '<li class="no-shelter">⚠️ Укриттів у базі OSM не знайдено поблизу. Зверніться до місцевої влади або використовуйте підвальні приміщення.</li>';
+        _shelterContext = `Координати користувача: ${lat.toFixed(5)}, ${lon.toFixed(5)}. Укриттів у базі OSM не знайдено в радіусі 3 км.`;
+      } else {
+        _shelterContext = `Координати користувача: ${lat.toFixed(5)}, ${lon.toFixed(5)}. Знайдені укриття:
+` +
+          d.shelters.map(s => `- ${s.name} (${s.dist}м): ${s.addr || 'адреса невідома'}`).join('
+');
+        d.shelters.forEach(s => {
+          const li = document.createElement('li');
+          li.className = 'shelter-item';
+          li.innerHTML = `
+            <span class="shelter-dist">${s.dist}м</span>
+            <div>
+              <div class="shelter-name">${s.name}</div>
+              ${s.addr ? `<div class="shelter-addr">${s.addr}</div>` : ''}
+              <a class="shelter-map" href="https://www.openstreetmap.org/?mlat=${s.lat}&mlon=${s.lon}&zoom=18" target="_blank">&#128205; Показати на карті</a>
+            </div>`;
+          list.appendChild(li);
+        });
+      }
+      addMsg('ai', `Знайдено ${d.shelters ? d.shelters.length : 0} укриттів поблизу. Ви можете уточнити у чаті нижче ⬇`);
+    } catch(e) {
+      list.innerHTML = '<li class="no-shelter">Помилка запиту до сервера</li>';
+    }
+    btn.disabled = false;
+  }, err => {
+    list.innerHTML = '<li class="no-shelter">⚠️ Доступ до геолокації відхилено. Введіть своє місце у чаті.</li>';
+    btn.disabled = false;
+    btn.textContent = '📍 Визначити місцезнаходження';
+  });
+}
+
+function addMsg(role, text) {
+  const box = document.getElementById('chatMessages');
+  const d   = document.createElement('div');
+  d.className = `msg msg-${role}`;
+  d.textContent = text;
+  box.appendChild(d);
+  box.scrollTop = box.scrollHeight;
+}
+
+async function sendChat() {
+  const inp = document.getElementById('chatInput');
+  const msg = inp.value.trim();
+  if (!msg) return;
+  inp.value = '';
+  addMsg('user', msg);
+  const loading = document.createElement('div');
+  loading.className = 'loading';
+  loading.textContent = '⏳ Думаю...';
+  document.getElementById('chatMessages').appendChild(loading);
+  try {
+    const r = await fetch('/api/shelter-chat', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({message: msg, context: _shelterContext})
+    });
+    const d = await r.json();
+    loading.remove();
+    addMsg('ai', d.reply || 'Помилка відповіді');
+  } catch(e) {
+    loading.remove();
+    addMsg('ai', 'Помилка зв\'язку з сервером');
+  }
+}
+
+document.getElementById('chatInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+});
+</script>
+</body>
+</html>"""
 
 HTML = """<!DOCTYPE html>
 <html lang="uk" dir="ltr">
@@ -1247,9 +1611,28 @@ class Handler(BaseHTTPRequestHandler):
         length = int(self.headers.get("Content-Length", 0))
         return self.rfile.read(length).decode()
 
+    def send_share_page(self):
+        cfg = load_config()
+        city = cfg.get("city", "Місто")
+        ch_count = len(cfg.get("channels", [])) + len(LOCKED_CHANNELS)
+        html = SHARE_HTML.replace("{{CITY}}", city).replace("{{CHANNEL_COUNT}}", str(ch_count))
+        body = html.encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     def do_GET(self):
         parsed = urlparse(self.path)
         path = parsed.path
+        if path == "/share":
+            self.send_share_page()
+            return
+        if path == "/api/bot-info":
+            uname, url = get_bot_info()
+            self.send_json({"username": uname, "url": url})
+            return
         if path == "/api/tunnel":
             running, pid = tunnel_running()
             cfg = load_config()
@@ -1329,6 +1712,29 @@ class Handler(BaseHTTPRequestHandler):
                 meta[str(ch_id)] = {"title": title, "username": username}
                 save_config(cfg)
                 self.send_json({"ok": True})
+                return
+
+            if path == "/api/shelter":
+                lat = payload.get("lat")
+                lon = payload.get("lon")
+                if lat is None or lon is None:
+                    self.send_json({"ok": False, "error": "lat/lon required"}, 400)
+                    return
+                try:
+                    shelters = query_shelters(float(lat), float(lon))
+                    self.send_json({"ok": True, "shelters": shelters})
+                except Exception as exc:
+                    self.send_json({"ok": False, "error": str(exc)})
+                return
+
+            if path == "/api/shelter-chat":
+                user_msg = payload.get("message", "").strip()
+                context  = payload.get("context", "").strip()
+                if not user_msg:
+                    self.send_json({"ok": False, "error": "message required"}, 400)
+                    return
+                reply = shelter_ai_query(user_msg, context)
+                self.send_json({"ok": True, "reply": reply})
                 return
 
             if path == "/tunnel-check":
