@@ -135,7 +135,7 @@ async def run_rollcall(bot_client, cfg: dict, family_id: int, threat_type: str):
         {"text": "🆘 ПОТРІБНА ДОПОМОГА", "callback_data": f"rc_sos_{rollcall_id}"}
     ]]
 
-    for member in members:
+    for i, member in enumerate(members):
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 await client.post(
@@ -149,6 +149,8 @@ async def run_rollcall(bot_client, cfg: dict, family_id: int, threat_type: str):
                 )
         except Exception as e:
             log.error(f"Rollcall delivery failed to {member['user_id']}: {e}")
+        if i < len(members) - 1:
+            await asyncio.sleep(0.05)  # 20 msg/sec max — stay under Telegram limit
 
     await asyncio.sleep(600)
 
@@ -174,5 +176,6 @@ async def run_rollcall(bot_client, cfg: dict, family_id: int, threat_type: str):
                                 f"https://api.telegram.org/bot{cfg['bot_token']}/sendMessage",
                                 json={'chat_id': other['user_id'], 'text': alert_msg, 'parse_mode': 'Markdown'}
                             )
+                        await asyncio.sleep(0.05)  # 20 msg/sec max
                     except Exception as e:
                         log.error(f"No-response alert failed: {e}")

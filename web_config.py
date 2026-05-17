@@ -11,7 +11,7 @@ import subprocess
 import math as _math
 import urllib.request
 import urllib.parse as _urllib_parse
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, HTTPServer, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 _shelter_cache: dict = {}   # {city_key: {"ts": float, "shelters": list}}
@@ -356,12 +356,15 @@ def query_shelters(lat: float, lon: float, radius: int = 3000) -> list:
         f"[out:json][timeout:30];"
         f"("
         f"  node[\"amenity\"=\"shelter\"](around:{radius},{lat},{lon});"
-        f"  node[\"shelter_type\"~\".\"](around:{radius},{lat},{lon});"
+        f"  node[\"shelter_type\"~\".\"]( around:{radius},{lat},{lon});"
         f"  node[\"civil_protection\"=\"shelter\"](around:{radius},{lat},{lon});"
         f"  node[\"emergency\"=\"shelter\"](around:{radius},{lat},{lon});"
         f"  node[\"building\"=\"basement\"][\"access\"=\"yes\"](around:{radius},{lat},{lon});"
+        f"  node[\"station\"=\"subway\"](around:{radius},{lat},{lon});"
+        f"  way[\"amenity\"=\"parking\"][\"parking\"=\"underground\"](around:{radius},{lat},{lon});"
+        f"  node[\"amenity\"=\"parking\"][\"parking\"=\"underground\"](around:{radius},{lat},{lon});"
         f");"
-        f"out body;"
+        f"out center;"
     )
     body = _urllib_parse.urlencode({"data": overpass_q}).encode()
     try:
@@ -388,14 +391,23 @@ def query_shelters(lat: float, lon: float, radius: int = 3000) -> list:
             tags.get("name")
             or tags.get("shelter_type")
             or tags.get("civil_protection")
+            or ("Метро" if tags.get("station") == "subway" else None)
+            or ("Підземний паркінг" if tags.get("parking") == "underground" else None)
             or "Укриття"
         )
+        # Add shelter type label for metro/parking
+        if tags.get("station") == "subway":
+            shelter_type_label = "metro"
+        elif tags.get("parking") == "underground":
+            shelter_type_label = "underground_parking"
+        else:
+            shelter_type_label = tags.get("shelter_type", tags.get("civil_protection", "public"))
         addr = (tags.get("addr:street", "") + " " + tags.get("addr:housenumber", "")).strip()
         shelters.append({
             "dist":    dist,
             "name":    name,
             "addr":    addr or tags.get("description", ""),
-            "type":    tags.get("shelter_type", tags.get("civil_protection", "public")),
+            "type":    shelter_type_label,
             "lat":     slat,
             "lon":     slon,
             "osm_id":  el.get("id"),
@@ -1661,6 +1673,27 @@ HTML = """<!DOCTYPE html>
       </div>
     </div>
 
+
+    <!-- SECURITY — admin password -->
+    <div class="card">
+      <div class="card-header"><span class="card-title">&#128274; Захист адмін-панелі</span></div>
+      <div class="card-body">
+        <div class="hint" style="margin-bottom:12px">HTTP Basic Auth для цієї сторінки. Якщо пароль порожній — захист вимкнено. /share та AI-чат доступні без пароля.</div>
+        <form method="POST" action="/save-password">
+          <div class="field-group">
+            <label class="field-label">Новий пароль</label>
+            <input class="input" type="password" name="admin_password" placeholder="залиш порожнім щоб вимкнути захист">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Підтвердити пароль</label>
+            <input class="input" type="password" name="admin_password_confirm" placeholder="повтори пароль">
+          </div>
+          <button type="submit" class="btn btn-primary">&#128274; Зберегти пароль</button>
+        </form>
+        <div class="hint" style="margin-top:8px;color:rgba(239,68,68,0.8)">&#9888; Якщо забудеш пароль — відредагуй config.json на сервері (SSH).</div>
+      </div>
+    </div>
+
     <!-- BOT TOKEN -->
     <div class="card">
       <div class="card-header"><span class="card-title" data-i18n="card_bot">🤖 Telegram Bot — сповіщувач</span></div>
@@ -1997,7 +2030,7 @@ function _chatAddMsg(role, title, text) {
     div.appendChild(t);
   }
   var body = document.createElement('span');
-  body.innerHTML = text.replace(/\*([^*]+)\*/g, '<strong>$1</strong>');
+  body.innerHTML = text.replace(/[*]([^*]+)[*]/g, '<strong>$1</strong>');
   div.appendChild(body);
   msgs.appendChild(div);
   msgs.scrollTop = msgs.scrollHeight;
@@ -2472,6 +2505,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed = urlparse(self.path)
         path = parsed.path
+        # Public routes — no auth required
         if path == "/share":
             self.send_share_page()
             return
@@ -2495,6 +2529,9 @@ class Handler(BaseHTTPRequestHandler):
             user_chs = get_user_channels(cfg)
             self.send_json({"user_channels": user_chs, "locked_count": len(LOCKED_CHANNELS)})
             return
+        # All remaining GET routes require admin auth
+        if not self._require_admin_auth():
+            return
         params = parse_qs(parsed.query)
         flash = params.get("flash", [None])[0]
         ft = params.get("ft", ["ok"])[0]
@@ -2508,16 +2545,49 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _require_admin_auth(self) -> bool:
+        """Check Basic Auth for admin routes. Returns True if OK, sends 401 if not."""
+        import base64
+        cfg = load_config()
+        password = cfg.get("admin_password", "")
+        if not password:
+            return True  # No password set — open access
+        auth = self.headers.get("Authorization", "")
+        if auth.startswith("Basic "):
+            try:
+                decoded = base64.b64decode(auth[6:]).decode("utf-8", errors="replace")
+                _, pwd = decoded.split(":", 1)
+                if pwd == password:
+                    return True
+            except Exception:
+                pass
+        body = b"<h1>401 Unauthorized</h1><p>Enter admin password.</p>"
+        self.send_response(401)
+        self.send_header("WWW-Authenticate", 'Basic realm="UAV Watcher Admin"')
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+        return False
+
     def do_POST(self):
         body = self.read_body()
         data = parse_qs(body)
         get = lambda k: data.get(k, [""])[0].strip()
 
         path = urlparse(self.path).path
+        # Form POSTs are always admin
+        if "application/json" not in self.headers.get("Content-Type", ""):
+            if not self._require_admin_auth():
+                return
 
         # JSON API endpoints (Content-Type: application/json)
         content_type = self.headers.get("Content-Type", "")
         if "application/json" in content_type:
+            _PUBLIC_JSON = {"/api/shelter", "/api/shelter-chat", "/api/chat",
+                            "/api/sos", "/api/sos-relay"}
+            if path not in _PUBLIC_JSON and not self._require_admin_auth():
+                return
             try:
                 payload = json.loads(body) if body else {}
             except Exception:
@@ -2640,7 +2710,7 @@ class Handler(BaseHTTPRequestHandler):
                 session_id = payload.get("session_id", "web-chat")
                 consultant_reply = _call_consultant(q, session_id)
                 if consultant_reply:
-                    self.send_json({"ok": True, "reply": consultant_reply})
+                    self.send_json({"ok": True, "reply": consultant_reply, "text": consultant_reply})
                 else:
                     self.send_json(chat_match(q))
                 return
@@ -2773,6 +2843,17 @@ class Handler(BaseHTTPRequestHandler):
                 save_config(cfg)
                 self.redirect(flash="✓ AI Proxy налаштування збережено")
 
+            elif path == "/save-password":
+                new_pw   = get("admin_password").strip()
+                confirm  = get("admin_password_confirm").strip()
+                if new_pw != confirm:
+                    self.redirect(flash="✗ Паролі не співпадають", flash_type="err")
+                    return
+                cfg["admin_password"] = new_pw
+                save_config(cfg)
+                msg = "✓ Пароль встановлено" if new_pw else "✓ Захист паролем вимкнено"
+                self.redirect(flash=msg)
+
             elif path == "/restart":
                 ok, msg = restart_service()
                 if ok:
@@ -2789,5 +2870,7 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     print(f"UAV Watcher Config UI → http://localhost:{PORT}")
-    server = HTTPServer(("0.0.0.0", PORT), Handler)
+    class ReusableServer(ThreadingHTTPServer):
+        allow_reuse_address = True
+    server = ReusableServer(("0.0.0.0", PORT), Handler)
     server.serve_forever()
