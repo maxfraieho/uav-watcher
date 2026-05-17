@@ -303,6 +303,75 @@ def query_shelters(lat: float, lon: float, radius: int = 3000) -> list:
     return shelters
 
 
+def send_sos_telegram(cfg: dict, lat, lon) -> bool:
+    """Send SOS Telegram message with coordinates. Returns True on success."""
+    token   = cfg.get("bot_token", "")
+    chat_id = cfg.get("notify_chat_id")
+    if not token or not chat_id:
+        return False
+    import time as _time
+    ts       = _time.strftime("%H:%M %d.%m.%Y")
+    city     = cfg.get("city", "невідомо")
+    tun_url  = cfg.get("tunnel_url", "")
+    coords   = f"{lat:.5f}, {lon:.5f}" if lat else "невідомо"
+    maps_url = f"https://maps.google.com/?q={lat},{lon}" if lat else ""
+
+    lines = [
+        "\U0001F198 *SOS \u2014 \u041b\u044e\u0434\u0438\u043d\u0430 \u043f\u0456\u0434 \u0437\u0430\u0432\u0430\u043b\u043e\u043c!*",
+        "",
+        f"\U0001F4CD \u041a\u043e\u043e\u0440\u0434\u0438\u043d\u0430\u0442\u0438: `{coords}`",
+    ]
+    if maps_url:
+        lines.append(f"\U0001F5FA [\u0412\u0456\u0434\u043a\u0440\u0438\u0442\u0438 \u043d\u0430 \u043a\u0430\u0440\u0442\u0456]({maps_url})")
+    lines += [
+        f"\U0001F3D9 \u041c\u0456\u0441\u0442\u043e: {city}",
+        f"\u23F0 {ts}",
+    ]
+    if tun_url:
+        lines.append(f"\U0001F517 [\u0412\u0435\u0431-\u0456\u043d\u0442\u0435\u0440\u0444\u0435\u0439\u0441]({tun_url}/share)")
+    lines += [
+        "",
+        "\u26A0\uFE0F \u0417\u0430\u0442\u0435\u043b\u0435\u0444\u043e\u043d\u0443\u0439\u0442\u0435 \u0440\u044f\u0442\u0456\u0432\u043d\u0438\u043a\u0430\u043c: *101*",
+    ]
+    text = "\n".join(lines)
+    body = json.dumps({
+        "chat_id": chat_id, "text": text,
+        "parse_mode": "Markdown", "disable_web_page_preview": True,
+    }, ensure_ascii=False).encode()
+    try:
+        req = urllib.request.Request(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            data=body, headers={"Content-Type": "application/json"},
+        )
+        with urllib.request.urlopen(req, timeout=10) as r:
+            result = json.loads(r.read())
+        return result.get("ok", False)
+    except Exception:
+        return False
+
+
+def send_sos_to_peers(cfg: dict, lat, lon):
+    """POST SOS relay to all configured rescue_peers."""
+    peers = cfg.get("rescue_peers", [])
+    if not peers:
+        return
+    body = json.dumps({
+        "lat": lat, "lon": lon,
+        "city": cfg.get("city", ""),
+        "tunnel_url": cfg.get("tunnel_url", ""),
+    }, ensure_ascii=False).encode()
+    for peer_url in peers:
+        try:
+            url = peer_url.rstrip("/") + "/api/sos-relay"
+            req = urllib.request.Request(url, data=body, headers={
+                "Content-Type": "application/json",
+                "User-Agent": "UAVWatcher-Rescue/1.0",
+            })
+            urllib.request.urlopen(req, timeout=8)
+        except Exception:
+            pass
+
+
 def get_bot_info() -> tuple:
     """Return (username, t.me/username) from Telegram getMe, or (None, None)."""
     cfg   = load_config()
@@ -405,6 +474,31 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .chat-input:focus{outline:none;border-color:#0ea5e9}
 .loading{color:#94a3b8;font-size:.8rem;text-align:center;padding:6px}
 .threat-hint{font-size:.78rem;color:#64748b;margin-top:6px}
+
+/* ── Rescue signal ── */
+.rescue-card{border-color:#7f1d1d;transition:border-color .3s,background .3s}
+.rescue-card.armed{background:#1c0a0a;border-color:#dc2626;animation:rescue-pulse 2s infinite}
+.rescue-card.sos-active{background:#1a0000;border-color:#ef4444}
+@keyframes rescue-pulse{0%,100%{border-color:#dc2626}50%{border-color:#f87171}}
+.rescue-hint{font-size:.82rem;color:#94a3b8;margin-bottom:12px;line-height:1.5}
+.btn-arm{background:#7f1d1d;color:#fca5a5;width:100%;font-size:1rem;padding:14px;letter-spacing:.04em}
+.btn-arm:hover{background:#991b1b}
+.btn-sos{background:#dc2626;color:#fff;width:100%;font-size:1.05rem;padding:14px;margin-bottom:8px;animation:sos-blink 1s infinite}
+@keyframes sos-blink{0%,100%{background:#dc2626}50%{background:#ef4444}}
+.btn-disarm{background:#1e293b;color:#94a3b8;width:100%;border:1px solid #334155}
+.rescue-status-row{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.rescue-dot{width:12px;height:12px;border-radius:50%;background:#dc2626;flex-shrink:0;animation:pulse 1s infinite}
+.rescue-status-text{font-size:.9rem;color:#fca5a5}
+.countdown-bar{height:4px;background:#334155;border-radius:2px;margin-bottom:10px;overflow:hidden}
+.countdown-fill{height:100%;background:#dc2626;transition:width 1s linear;border-radius:2px}
+.sos-overlay{position:fixed;inset:0;background:#1a0000;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px}
+.sos-title{font-size:3rem;font-weight:900;color:#ef4444;letter-spacing:.15em;animation:sos-blink 0.6s infinite}
+.sos-coords-box{background:#2d0000;border:1px solid #dc2626;border-radius:10px;padding:12px 20px;text-align:center}
+.sos-coords-text{font-family:monospace;font-size:.9rem;color:#fca5a5}
+.sos-maps-link{color:#f87171;text-decoration:none;font-size:.82rem;display:block;margin-top:6px}
+.sos-sent-badge{background:#166534;color:#86efac;border-radius:6px;padding:6px 14px;font-size:.8rem}
+.btn-cancel-sos{background:#334155;color:#e2e8f0;border-radius:8px;padding:12px 28px;font-size:.95rem;font-weight:600;border:none;cursor:pointer}
+.manual-trigger{background:none;border:1px dashed #475569;color:#64748b;border-radius:6px;padding:6px 12px;font-size:.75rem;cursor:pointer;margin-top:6px;width:100%}
 </style>
 </head>
 <body>
@@ -455,6 +549,38 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
       <button class="btn btn-send" onclick="sendChat()">&#10148;</button>
     </div>
     <div class="threat-hint">БАЛІСТИКА = критичний рівень · ДРОНИ = високий · АРТИЛЕРІЯ = середній</div>
+  </div>
+
+  <!-- Rescue signal card -->
+  <div class="card rescue-card" id="rescueCard">
+    <div class="card-title">&#9888;&#65039; Сигнал рятувальника</div>
+    <div id="rescueIdle">
+      <p class="rescue-hint">Увімкніть захист перед входом у небезпечну зону. При ударі та нерухомості 30+ с — автоматично подасть звуковий сигнал SOS та надішле координати рятувальникам і сусіднім станціям UAV Watcher.</p>
+      <button class="btn btn-arm" onclick="armRescue()">&#128737;&#65039; Увімкнути захист</button>
+    </div>
+    <div id="rescueArmed" style="display:none">
+      <div class="rescue-status-row">
+        <div class="rescue-dot"></div>
+        <div class="rescue-status-text" id="rescueStatusText">Захист активний — очікування удару</div>
+      </div>
+      <div class="countdown-bar" id="countdownBarWrap" style="display:none">
+        <div class="countdown-fill" id="countdownFill" style="width:100%"></div>
+      </div>
+      <button class="btn btn-sos" onclick="triggerSOS()">&#128680; НАДІСЛАТИ SOS ЗАРАЗ</button>
+      <button class="btn btn-disarm" onclick="disarmRescue()">Вимкнути захист</button>
+      <button class="manual-trigger" onclick="triggerSOS()">Немає руху датчика — надіслати вручну</button>
+    </div>
+  </div>
+
+  <!-- SOS full-screen overlay (shown when SOS active) -->
+  <div class="sos-overlay" id="sosOverlay" style="display:none">
+    <div class="sos-title">S&#183;O&#183;S</div>
+    <div class="sos-coords-box">
+      <div class="sos-coords-text" id="sosCoordsText">Визначення координат...</div>
+      <a class="sos-maps-link" id="sosMapsLink" href="#" target="_blank">&#128205; Відкрити на Google Maps</a>
+    </div>
+    <div id="sosSentBadge" style="display:none" class="sos-sent-badge">&#10003; Сигнал надіслано</div>
+    <button class="btn-cancel-sos" onclick="cancelSOS()">Скасувати SOS</button>
   </div>
 
 </div>
@@ -575,6 +701,205 @@ async function sendChat() {
 document.getElementById('chatInput').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
 });
+
+// ── Rescue signal ─────────────────────────────────────────────────────────────
+let _armed = false, _sosActive = false;
+let _userLat = null, _userLon = null;
+let _peakAccel = 0, _lastImpact = null, _quietSince = null;
+let _sosTimerId = null, _countdownSec = 30, _countdownRemain = 30;
+let _audioCtx = null;
+
+function armRescue() {
+  _armed = true;
+  document.getElementById('rescueIdle').style.display = 'none';
+  document.getElementById('rescueArmed').style.display = '';
+  document.getElementById('rescueCard').classList.add('armed');
+  setRescueStatus('Захист активний — очікування удару');
+
+  // Grab location silently
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      p => { _userLat = p.coords.latitude; _userLon = p.coords.longitude; },
+      () => {}
+    );
+  }
+
+  // Start motion watch
+  if (typeof DeviceMotionEvent !== 'undefined') {
+    if (typeof DeviceMotionEvent.requestPermission === 'function') {
+      DeviceMotionEvent.requestPermission()
+        .then(r => { if (r === 'granted') window.addEventListener('devicemotion', _onMotion); })
+        .catch(() => {});
+    } else {
+      window.addEventListener('devicemotion', _onMotion);
+    }
+  }
+}
+
+function disarmRescue() {
+  _armed = false;
+  _lastImpact = null; _quietSince = null;
+  clearInterval(_sosTimerId);
+  window.removeEventListener('devicemotion', _onMotion);
+  document.getElementById('rescueIdle').style.display = '';
+  document.getElementById('rescueArmed').style.display = 'none';
+  document.getElementById('countdownBarWrap').style.display = 'none';
+  document.getElementById('rescueCard').classList.remove('armed');
+}
+
+function setRescueStatus(txt) {
+  document.getElementById('rescueStatusText').textContent = txt;
+}
+
+function _onMotion(e) {
+  if (!_armed || _sosActive) return;
+  const a = e.accelerationIncludingGravity;
+  if (!a) return;
+  const mag = Math.sqrt((a.x||0)**2 + (a.y||0)**2 + (a.z||0)**2);
+
+  if (mag > 22 && !_lastImpact) {
+    _lastImpact = Date.now();
+    _quietSince = null;
+    setRescueStatus('⚠️ Удар виявлено — 30 с нерухомості → SOS');
+  }
+
+  if (_lastImpact) {
+    if (mag < 2.5) {
+      if (!_quietSince) { _quietSince = Date.now(); _startCountdown(); }
+    } else if (mag > 5) {
+      _quietSince = null;
+      _cancelCountdown();
+      setRescueStatus('Захист активний — рух виявлено, чекаю удару');
+      _lastImpact = null;
+    }
+  }
+}
+
+function _startCountdown() {
+  _countdownRemain = _countdownSec;
+  const bar = document.getElementById('countdownFill');
+  const wrap = document.getElementById('countdownBarWrap');
+  wrap.style.display = '';
+  bar.style.width = '100%';
+  setRescueStatus(`SOS через ${_countdownRemain}с...`);
+  clearInterval(_sosTimerId);
+  _sosTimerId = setInterval(() => {
+    _countdownRemain--;
+    bar.style.width = (_countdownRemain / _countdownSec * 100) + '%';
+    setRescueStatus(`SOS через ${_countdownRemain}с...`);
+    if (_countdownRemain <= 0) { clearInterval(_sosTimerId); triggerSOS(); }
+  }, 1000);
+}
+
+function _cancelCountdown() {
+  clearInterval(_sosTimerId);
+  document.getElementById('countdownBarWrap').style.display = 'none';
+}
+
+async function triggerSOS() {
+  if (_sosActive) return;
+  _sosActive = true;
+  clearInterval(_sosTimerId);
+  window.removeEventListener('devicemotion', _onMotion);
+
+  // Show overlay
+  const overlay = document.getElementById('sosOverlay');
+  overlay.style.display = 'flex';
+  document.getElementById('rescueCard').classList.add('sos-active');
+
+  // Get final coords
+  if (navigator.geolocation && !_userLat) {
+    await new Promise(resolve => navigator.geolocation.getCurrentPosition(
+      p => { _userLat = p.coords.latitude; _userLon = p.coords.longitude; resolve(); },
+      () => resolve(), {timeout: 5000}
+    ));
+  }
+
+  if (_userLat) {
+    document.getElementById('sosCoordsText').textContent = `${_userLat.toFixed(5)}, ${_userLon.toFixed(5)}`;
+    document.getElementById('sosMapsLink').href = `https://maps.google.com/?q=${_userLat},${_userLon}`;
+  } else {
+    document.getElementById('sosCoordsText').textContent = 'Координати недоступні';
+    document.getElementById('sosMapsLink').style.display = 'none';
+  }
+
+  // Audio SOS
+  _startSOSAudio();
+
+  // Flash screen repeatedly
+  _flashScreen();
+
+  // Notify server
+  try {
+    const r = await fetch('/api/sos', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({lat: _userLat, lon: _userLon})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      document.getElementById('sosSentBadge').style.display = '';
+    }
+  } catch(e) {}
+}
+
+function cancelSOS() {
+  _sosActive = false;
+  _armed = false;
+  _stopSOSAudio();
+  document.getElementById('sosOverlay').style.display = 'none';
+  document.getElementById('rescueCard').classList.remove('armed','sos-active');
+  document.getElementById('rescueArmed').style.display = 'none';
+  document.getElementById('rescueIdle').style.display = '';
+  _lastImpact = null; _quietSince = null;
+}
+
+function _startSOSAudio() {
+  try {
+    _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    _sosLoop();
+  } catch(e) {}
+}
+
+function _stopSOSAudio() {
+  if (_audioCtx) { try { _audioCtx.close(); } catch(e) {} _audioCtx = null; }
+}
+
+function _sosLoop() {
+  if (!_sosActive || !_audioCtx) return;
+  const ctx = _audioCtx;
+  const dot = 0.18, dash = 0.5, gap = 0.12, lg = 0.45, wg = 1.2;
+
+  function beep(t, dur) {
+    const osc = ctx.createOscillator();
+    const g   = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.value = 900;
+    g.gain.setValueAtTime(0.001, t);
+    g.gain.exponentialRampToValueAtTime(0.85, t + 0.01);
+    g.gain.setValueAtTime(0.85, t + dur - 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.connect(g); g.connect(ctx.destination);
+    osc.start(t); osc.stop(t + dur);
+  }
+
+  let t = ctx.currentTime;
+  for (let i = 0; i < 3; i++) { beep(t, dot); t += dot + gap; } t += lg;
+  for (let i = 0; i < 3; i++) { beep(t, dash); t += dash + gap; } t += lg;
+  for (let i = 0; i < 3; i++) { beep(t, dot); t += dot + gap; } t += wg;
+
+  const total = (t - ctx.currentTime) * 1000;
+  setTimeout(() => { if (_sosActive) _sosLoop(); }, total);
+}
+
+function _flashScreen() {
+  if (!_sosActive) return;
+  document.body.style.background = '#400';
+  setTimeout(() => {
+    if (_sosActive) { document.body.style.background = '#0f172a'; setTimeout(_flashScreen, 600); }
+    else document.body.style.background = '#0f172a';
+  }, 400);
+}
 </script>
 </body>
 </html>"""
@@ -1711,6 +2036,52 @@ class Handler(BaseHTTPRequestHandler):
                 meta = cfg.setdefault("channels_meta", {})
                 meta[str(ch_id)] = {"title": title, "username": username}
                 save_config(cfg)
+                self.send_json({"ok": True})
+                return
+
+            if path == "/api/sos":
+                lat = payload.get("lat")
+                lon = payload.get("lon")
+                cfg = load_config()
+                tg_ok = send_sos_telegram(cfg, lat, lon)
+                send_sos_to_peers(cfg, lat, lon)
+                self.send_json({"ok": True, "tg_sent": tg_ok})
+                return
+
+            if path == "/api/sos-relay":
+                # Incoming SOS from a peer UAV Watcher instance
+                lat      = payload.get("lat")
+                lon      = payload.get("lon")
+                src_city = payload.get("city", "невідома")
+                src_url  = payload.get("tunnel_url", "")
+                cfg      = load_config()
+                token    = cfg.get("bot_token", "")
+                chat_id  = cfg.get("notify_chat_id")
+                if token and chat_id:
+                    coords = f"{lat:.5f}, {lon:.5f}" if lat else "невідомо"
+                    maps_url = f"https://maps.google.com/?q={lat},{lon}" if lat else ""
+                    text = (
+                        "\U0001F198 *SOS-ретрансляція \u2014 \u041b\u044e\u0434\u0438\u043d\u0430 \u043f\u0456\u0434 \u0437\u0430\u0432\u0430\u043b\u043e\u043c!*\n\n"
+                        f"\U0001F4CD `{coords}`\n"
+                    )
+                    if maps_url:
+                        text += f"\U0001F5FA [\u041a\u0430\u0440\u0442\u0430]({maps_url})\n"
+                    text += f"\U0001F4E1 \u0414\u0436\u0435\u0440\u0435\u043b\u043e: {src_city}"
+                    if src_url:
+                        text += f" ([\u043f\u043e\u0441\u0438\u043b\u0430\u043d\u043d\u044f]({src_url}/share))"
+                    text += "\n\n\u26A0\uFE0F \u0417\u0430\u0442\u0435\u043b\u0435\u0444\u043e\u043d\u0443\u0439\u0442\u0435: *101*"
+                    body = json.dumps({
+                        "chat_id": chat_id, "text": text,
+                        "parse_mode": "Markdown", "disable_web_page_preview": True,
+                    }, ensure_ascii=False).encode()
+                    try:
+                        req = urllib.request.Request(
+                            f"https://api.telegram.org/bot{token}/sendMessage",
+                            data=body, headers={"Content-Type": "application/json"},
+                        )
+                        urllib.request.urlopen(req, timeout=10)
+                    except Exception:
+                        pass
                 self.send_json({"ok": True})
                 return
 
