@@ -142,6 +142,8 @@ async def main():
         re.IGNORECASE
     )
 
+    ai_sem = asyncio.Semaphore(1)
+
     @client.on(events.NewMessage(chats=channels))
     async def handler(event):
         text = event.message.text or ""
@@ -150,7 +152,8 @@ async def main():
         if not region_pattern.search(text):
             return
         log.info(f"Keyword matched, AI check: {text[:100]}...")
-        is_threat, reason = await ai_classify(text, cfg)
+        async with ai_sem:
+            is_threat, reason = await ai_classify(text, cfg)
         if is_threat:
             log.warning(f"THREAT: {reason}")
             await send_notification(text, reason, cfg)
