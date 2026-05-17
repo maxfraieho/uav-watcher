@@ -95,6 +95,14 @@ FAB/КАБ — тільки спеціальне сховище ДСНС або 
 """
 
 
+CASUAL_SYSTEM_PROMPT = """Ти Шарон — AI-помічник з безпеки в Олександрії.
+Відповідай коротко і дружньо (1-3 речення). Тільки українська.
+Якщо питають про безпеку, тривогу, БПЛА, укриття — дай коротку пораду.
+Якщо питання загальне, грубе або не по темі — відповідай нейтрально: 1 речення, без нотацій.
+Не питай "Ти зараз сидиш?" без кризових ознак.
+Екстрені: 101 (ДСНС), 102, 103, 112.
+"""
+
 
 def detect_crisis_state(text: str) -> str | None:
     """Heuristic state detection from message text patterns."""
@@ -262,9 +270,10 @@ def generate(state: CrisisState) -> dict:
     # Detect user's psychological state and hint to LLM
     raw_query = state["query"]
     crisis_state = detect_crisis_state(raw_query)
-    system_content = SYSTEM_PROMPT
     if crisis_state:
         system_content = SYSTEM_PROMPT + f"\n\n[УВАГА: Виявлено стан — {crisis_state}. Адаптуй тон і формат відповіді відповідно.]"
+    else:
+        system_content = CASUAL_SYSTEM_PROMPT
 
     msgs = [{"role": "system", "content": system_content}]
     for msg in history[-6:]:
