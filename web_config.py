@@ -1380,12 +1380,14 @@ HTML = """<!DOCTYPE html>
 
   /* ── CHAT TOGGLE BTN ── */
   .chat-toggle-btn {
-    background: none; border: 1px solid rgba(56,189,248,0.2); border-radius: 2px;
-    color: var(--blue); cursor: pointer; padding: 0;
-    display: flex; align-items: center; justify-content: center;
+    background: none; border: 1px solid rgba(56,189,248,0.2); border-radius: 4px;
+    color: var(--blue); cursor: pointer; padding: 0 8px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
     transition: background 0.15s, border-color 0.15s;
-    height: 36px; width: 36px; flex-shrink: 0;
+    height: 40px; min-width: 48px; flex-shrink: 0; gap: 1px;
   }
+  .chat-toggle-btn .cat-icon { font-size: 20px; line-height: 1; }
+  .chat-toggle-btn .cat-label { font-size: 9px; font-family: var(--mono); letter-spacing: 0.05em; opacity: 0.7; }
   .chat-toggle-btn:hover { background: rgba(56,189,248,0.1); border-color: var(--blue); }
   .chat-toggle-btn.active { background: rgba(249,115,22,0.15); border-color: var(--accent); color: var(--accent); }
 
@@ -1506,8 +1508,9 @@ HTML = """<!DOCTYPE html>
 </head>
 <body>
 <div class="topbar">
-  <button class="chat-toggle-btn" onclick="toggleChat()" id="chat-toggle-btn" title="Консультант">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  <button class="chat-toggle-btn" onclick="toggleChat()" id="chat-toggle-btn" title="Шарон — кризовий гід">
+    <span class="cat-icon">🐱</span>
+    <span class="cat-label">Шарон</span>
   </button>
     <div class="dot"></div>
   <span class="topbar-title" data-i18n="title">UAV WATCHER</span>
@@ -2101,7 +2104,7 @@ async function tunLoadStatus() {
 
 // ── CHAT CONSULTANT ──────────────────────────────────────────────────────────
 let _chatOpen = false;
-const _CHAT_WELCOME = `Моніторю {city} 24/7.\n\nПитай про загрози, укриття або що робити просто зараз.`;
+const _CHAT_WELCOME = `Привіт. Я Шарон — моніторю {city} 24/7.\nЯ тут, щоб ти вижив.\n\nПитай про загрози, укриття або що робити прямо зараз.`;
 
 function toggleChat() {
   _chatOpen = !_chatOpen;
@@ -2553,11 +2556,9 @@ function selectOllamaModel(model, ram) {
 <div class="chat-backdrop" id="chat-backdrop" onclick="toggleChat()"></div>
 <div id="chat-panel" class="chat-panel">
   <div class="chat-header">
-    <span class="chat-header-icon">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-    </span>
-    <span class="chat-header-title">Консультант</span>
-    <span class="chat-header-sub">UAV WATCHER</span>
+    <span class="chat-header-icon" style="font-size:18px;line-height:1">🐱</span>
+    <span class="chat-header-title">Шарон</span>
+    <span class="chat-header-sub">Я тут, щоб ти вижив</span>
     <button class="chat-close" onclick="toggleChat()">✕</button>
   </div>
   <div class="chat-messages" id="chat-messages"></div>
