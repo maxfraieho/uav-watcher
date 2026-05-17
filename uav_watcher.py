@@ -31,6 +31,35 @@ def load_config():
 
 
 
+
+def score_proximity(text: str, city_keywords: list) -> tuple[int, list]:
+    """Score 1-10: how close/severe is this threat to the monitored city."""
+    tl = text.lower()
+    score = 1  # baseline: passed region filter
+    terms = []
+    for kw in city_keywords:
+        if kw.lower() in tl:
+            score += 3
+            terms.append(kw)
+            break
+    for m in ["над містом", "над нами", "над районом", "низько", "поряд", "поруч"]:
+        if m in tl:
+            score += 3
+            terms.append(m)
+            break
+    for m in ["підліт", "підлітає", "на підльоті", "курсом на", "прямує до"]:
+        if m in tl:
+            score += 2
+            terms.append(m)
+            break
+    for m in ["прильот", "влучання", "вибух", "влучив", "удар"]:
+        if m in tl:
+            score += 2
+            terms.append(m)
+            break
+    return min(score, 10), terms
+
+
 # Keyword patterns for reliable classification WITHOUT AI
 _THREAT_PATTERNS = re.compile(
     r'рух БПЛА|підліт БПЛА|підліт ракет|над містом|низько|над районом'
@@ -45,6 +74,10 @@ _THREAT_PATTERNS = re.compile(
 _ALLCLEAR_PATTERNS = re.compile(
     r'відбій тривоги|відбій повітряної|тривогу скасовано|тривога скасована'
     r'|кінець тривоги|відбій оголошено',
+    re.IGNORECASE | re.UNICODE,
+)
+_AIRARAID_PATTERNS = re.compile(
+    r'повітряна тривога|тривога оголошена|оголошено тривогу|повітряна небезпека',
     re.IGNORECASE | re.UNICODE,
 )
 
@@ -65,6 +98,10 @@ def keyword_classify(text: str, city_keywords: list[str]) -> tuple[bool | None, 
 
     if city_hit and _THREAT_PATTERNS.search(text):
         return True, f"БПЛА загроза (ключові слова)"
+
+    # Air raid alert for this city — always notify without AI
+    if city_hit and _AIRARAID_PATTERNS.search(text):
+        return True, "повітряна тривога у місті"
 
     # No city match but explicit threat — mark as ambiguous for AI
     return None, ""
@@ -225,11 +262,29 @@ async def main():
             return
         if not region_pattern_search(text):
             return
-        log.info(f"Keyword matched, AI check: {text[:100]}...")
+        # Identify source channel
+        chat = await event.get_chat()
+        ch_name = getattr(chat, "title", str(event.chat_id))
+        log.info(f"Keyword matched [{ch_name}]: {text[:100]}...")
+        # Score proximity before AI classification
+        prox_score, prox_terms = score_proximity(text, keywords)
         async with ai_sem:
             is_threat, reason = await ai_classify(text, cfg)
+        # Classify all_clear
+        is_allclear = (not is_threat) and bool(_ALLCLEAR_PATTERNS.search(text))
+        # Persist to threat_events for statistics and consultant context
+        from db.models import save_threat_event
+        save_threat_event(
+            channel_id=event.chat_id,
+            channel_name=ch_name,
+            text=text,
+            threat_type="uav" if is_threat else ("allclear" if is_allclear else "info"),
+            proximity_score=prox_score,
+            location_terms=prox_terms,
+            is_allclear=is_allclear,
+        )
         if is_threat:
-            log.warning(f"THREAT: {reason}")
+            log.warning(f"THREAT [prox={prox_score}/10, terms={prox_terms}]: {reason}")
             await send_notification(text, reason, cfg)
         else:
             log.info(f"No threat: {reason}")
@@ -327,7 +382,7 @@ async def main():
 
     # --- FAMILY HANDLERS (Task 1.2) ---
     from family.bot_handlers import register_family_handlers
-    register_family_handlers(bot_app, cfg)
+    register_family_handlers(bot_app, cfg, user_client=client)
     log.info("Family bot handlers registered.")
 
     # --- LOCATION TRACKER (Task 2.1) ---
