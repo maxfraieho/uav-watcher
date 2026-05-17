@@ -1658,7 +1658,7 @@ HTML = """<!DOCTYPE html>
     <div class="card">
       <div class="card-header"><span class="card-title">&#129302; AI Proxy — LLM налаштування</span></div>
       <div class="card-body">
-        <div class="hint" style="margin-bottom:12px">OpenAI-сумісний проксі для AI-консультанта. Вкажіть базову URL (без <code>/chat/completions</code>).</div>
+        <div class="hint" style="margin-bottom:12px">OpenAI-сумісний проксі для AI-консультанта. Вкажіть базову URL (без <code>/chat/completions</code>). Локальна модель без інтернету: <b>Ollama</b> URL=<code>http://localhost:11434/v1</code>, Token=<code>ollama</code>, Model=<code>qwen2:1.5b</code>.</div>
         <form method="POST" action="/save-llm">
           <div class="field-group">
             <label class="field-label">Proxy URL</label>
