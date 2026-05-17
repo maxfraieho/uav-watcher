@@ -1,13 +1,17 @@
 """LangGraph nodes: retrieve_kb -> web_search -> generate."""
 import os
 import pathlib
+import time
 import httpx
 from langchain_core.messages import HumanMessage, AIMessage
+from situation_watcher import read_situation
 from .states import CrisisState
 
 PROXY_URL   = os.getenv("PROXY_URL", "http://localhost:18880/v1")
 PROXY_TOKEN = os.getenv("PROXY_TOKEN", "freecc")
 PROXY_MODEL = os.getenv("PROXY_MODEL", "docs-assistant-proxy")
+
+_PROJECT_ROOT = pathlib.Path(__file__).parent.parent.parent
 
 _WEB_SEARCH_KEYWORDS = [
     "де ", "найближч", "бомбосховищ", "укрит", "зараз", "ситуаці",
@@ -89,19 +93,30 @@ SYSTEM_PROMPT = """Ти — кризовий консультант систем
 НЕ вигадуй факти. Якщо не знаєш — скажи прямо і дай екстрений номер.
 """
 
+# Cached proxy config — re-read from config.json at most every 30s
+_proxy_cfg_cache: tuple[str, str, str] | None = None
+_proxy_cfg_ts: float = 0.0
+_PROXY_TTL = 30.0
+
 
 def _get_proxy_cfg() -> tuple[str, str, str]:
-    """Read proxy settings from config.json at call time."""
+    global _proxy_cfg_cache, _proxy_cfg_ts
+    now = time.monotonic()
+    if _proxy_cfg_cache is not None and now - _proxy_cfg_ts < _PROXY_TTL:
+        return _proxy_cfg_cache
     import json as _json
-    config_path = pathlib.Path(__file__).parent.parent.parent / "config.json"
+    config_path = _PROJECT_ROOT / "config.json"
     try:
         cfg = _json.loads(config_path.read_text(encoding="utf-8"))
-        url   = cfg.get("llm_proxy_url") or os.getenv("PROXY_URL", PROXY_URL)
+        url   = cfg.get("llm_proxy_url")   or os.getenv("PROXY_URL",   PROXY_URL)
         token = cfg.get("llm_proxy_token") or os.getenv("PROXY_TOKEN", PROXY_TOKEN)
         model = cfg.get("llm_proxy_model") or os.getenv("PROXY_MODEL", PROXY_MODEL)
-        return url.rstrip("/"), token, model
+        result = url.rstrip("/"), token, model
     except Exception:
-        return PROXY_URL, PROXY_TOKEN, PROXY_MODEL
+        result = PROXY_URL, PROXY_TOKEN, PROXY_MODEL
+    _proxy_cfg_cache = result
+    _proxy_cfg_ts = now
+    return result
 
 
 def _llm_call(messages: list[dict]) -> str:
@@ -121,35 +136,22 @@ def _format_offline(kb_context: str, query: str) -> str:
     if not kb_context:
         return (
             "⚠️ Немає зв'язку з AI. Дані за запитом не знайдено.\n\n"
-            "\U0001f4de Екстрені: 101 (ДСНС), 102 (поліція), 103 (швидка), 112"
+            "📞 Екстрені: 101 (ДСНС), 102 (поліція), 103 (швидка), 112"
         )
     preview = kb_context[:800].strip()
     if len(kb_context) > 800:
         preview += "..."
     return (
-        "\U0001f4da [Офлайн-режим] База знань:\n\n"
+        "📚 [Офлайн-режим] База знань:\n\n"
         + preview
-        + "\n\n\U0001f4de Екстрені: 101, 102, 103, 112"
+        + "\n\n📞 Екстрені: 101, 102, 103, 112"
     )
-
-
-def _read_situation_context() -> str:
-    """Read current alert situation from watchdog file (max 5 minutes old)."""
-    import json, time
-    try:
-        p = pathlib.Path(__file__).parent.parent.parent / "situation_context.json"
-        data = json.loads(p.read_text(encoding="utf-8"))
-        if int(time.time()) - data.get("ts", 0) > 300:
-            return ""
-        return data.get("summary", "")
-    except Exception:
-        return ""
 
 
 def retrieve_kb(state: CrisisState) -> dict:
     from knowledge_base.retrieval import retrieve_text
     kb = retrieve_text(state["query"], top_k=3)
-    situation = _read_situation_context()
+    situation = read_situation(_PROJECT_ROOT)
     if situation:
         kb = "[Поточна ситуація з тривогами]\n" + situation + "\n\n" + kb
     return {"kb_context": kb}

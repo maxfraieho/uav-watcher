@@ -23,7 +23,7 @@ def _base_state(**overrides) -> CrisisState:
 
 
 def _mock_client(content: str):
-    """Return a mock httpx.Client context manager whose .post() returns a fake response."""
+    """Mock httpx.Client context manager whose .post() returns a fake response."""
     mock_resp = MagicMock()
     mock_resp.json.return_value = {"choices": [{"message": {"content": content}}]}
     mock_resp.raise_for_status = MagicMock()
@@ -41,9 +41,24 @@ def test_retrieve_kb_returns_kb_context(tmp_path):
     retrieval.init(tmp_path)
 
     state = _base_state(query="загроза")
-    result = retrieve_kb(state)
+    # read_situation returns "" when no file present — no situation injection
+    with patch("pipeline.nodes.read_situation", return_value=""):
+        result = retrieve_kb(state)
     assert "kb_context" in result
     assert isinstance(result["kb_context"], str)
+
+
+def test_retrieve_kb_injects_situation(tmp_path):
+    from knowledge_base import retrieval
+    md = tmp_path / "t.md"
+    md.write_text("# T\n\n## Розділ\nТекст про загрозу.\n", encoding="utf-8")
+    retrieval.init(tmp_path)
+
+    state = _base_state(query="загроза")
+    with patch("pipeline.nodes.read_situation", return_value="Активна тривога у Харківській."):
+        result = retrieve_kb(state)
+    assert "Активна тривога" in result["kb_context"]
+    assert result["kb_context"].startswith("[Поточна ситуація")
 
 
 def test_generate_calls_llm_and_returns_reply():
@@ -88,5 +103,30 @@ def test_generate_offline_fallback():
     with patch("pipeline.nodes.httpx.Client", return_value=mock_client_instance):
         result = generate(state)
 
-    assert result["reply"]  # not empty
-    assert "101" in result["reply"] or "офлайн" in result["reply"].lower() or "112" in result["reply"]
+    assert result["reply"]
+    assert "101" in result["reply"] or "112" in result["reply"]
+
+
+def test_proxy_cfg_caches():
+    """_get_proxy_cfg should not re-read config.json on every call."""
+    from pipeline.nodes import _get_proxy_cfg
+    import pipeline.nodes as nodes_mod
+    # Reset cache
+    nodes_mod._proxy_cfg_cache = None
+    nodes_mod._proxy_cfg_ts = 0.0
+
+    read_count = 0
+    original = Path.read_text
+
+    def counting_read(self, *a, **kw):
+        nonlocal read_count
+        if self.name == "config.json":
+            read_count += 1
+        return original(self, *a, **kw)
+
+    with patch.object(Path, "read_text", counting_read):
+        _get_proxy_cfg()
+        _get_proxy_cfg()
+        _get_proxy_cfg()
+
+    assert read_count == 1, f"Expected 1 config.json read, got {read_count}"
