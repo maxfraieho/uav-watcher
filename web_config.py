@@ -132,9 +132,13 @@ def tunnel_running():
     if not pid:
         return False, None
     try:
+        with open(f"/proc/{int(pid)}/status") as f:
+            for line in f:
+                if line.startswith("State:") and "Z" in line:
+                    return False, None  # zombie — process is dead
         os.kill(int(pid), 0)
         return True, int(pid)
-    except (ProcessLookupError, PermissionError, ValueError):
+    except Exception:
         return False, None
 
 
@@ -205,6 +209,16 @@ def tunnel_stop():
     if pid:
         try:
             os.kill(int(pid), signal.SIGTERM)
+        except Exception:
+            pass
+        try:
+            import time as _t
+            _t.sleep(0.3)
+            os.kill(int(pid), signal.SIGKILL)  # force if still alive
+        except Exception:
+            pass
+        try:
+            os.waitpid(int(pid), os.WNOHANG)  # reap zombie
         except Exception:
             pass
     cfg["tunnel_pid"] = None
@@ -603,7 +617,7 @@ async function connectTg() {
       btn.textContent = 'Бот не налаштований';
     }
   } catch(e) {
-    btn.textContent = 'Помилка з\'єднання';
+    btn.textContent = `Помилка з'єднання`;
   }
 }
 
@@ -694,7 +708,7 @@ async function sendChat() {
     addMsg('ai', d.reply || 'Помилка відповіді');
   } catch(e) {
     loading.remove();
-    addMsg('ai', 'Помилка зв\'язку з сервером');
+    addMsg('ai', `Помилка зв'язку з сервером`);
   }
 }
 
@@ -1482,7 +1496,7 @@ async function tunCheck() {
     if (d.conflict) { _tunShowCheck(false, d.hostname + ' — вже зайнято'); return false; }
     _tunShowCheck(true, d.hostname + ' — доступно ✓');
     return true;
-  } catch(e) { _tunShowCheck(false, 'Помилка з\'єднання'); return false; }
+  } catch(e) { _tunShowCheck(false, `Помилка з'єднання`); return false; }
 }
 async function tunStart() {
   const prefix = document.getElementById('tun-prefix').value.trim().toLowerCase();
