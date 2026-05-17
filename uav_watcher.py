@@ -29,6 +29,46 @@ def load_config():
         return json.load(f)
 
 
+
+# Keyword patterns for reliable classification WITHOUT AI
+_THREAT_PATTERNS = re.compile(
+    r'рух БПЛА|підліт БПЛА|підліт ракет|над містом|низько|над районом'
+    r'|атака БПЛА|удар БПЛА|прильот|влучання|ракетна атака'
+    r'|ударний БПЛА|дрон-камікадзе|Shahed|шахед'
+    r'|група БПЛА|роїв БПЛА|хвиля БПЛА'
+    r'|ракет[ау] пущено|ракетна небезпека'
+    r'|повітряна тривога.*загроза|загроза.*повітряна тривога'
+    r'|УВАГА.*БПЛА|БПЛА.*УВАГА',
+    re.IGNORECASE | re.UNICODE,
+)
+_ALLCLEAR_PATTERNS = re.compile(
+    r'відбій тривоги|відбій повітряної|тривогу скасовано|тривога скасована'
+    r'|кінець тривоги|відбій оголошено',
+    re.IGNORECASE | re.UNICODE,
+)
+
+def keyword_classify(text: str, city_keywords: list[str]) -> tuple[bool | None, str]:
+    """
+    Fast keyword pre-classifier.
+    Returns (True, reason) for clear threat, (False, reason) for clear allclear,
+    or (None, "") if ambiguous — let AI decide.
+    """
+    tl = text.lower()
+
+    # Explicit all-clear beats everything
+    if _ALLCLEAR_PATTERNS.search(text):
+        return False, "відбій (ключове слово)"
+
+    # Check if any city keyword is present in the text
+    city_hit = any(kw.lower() in tl for kw in city_keywords)
+
+    if city_hit and _THREAT_PATTERNS.search(text):
+        return True, f"БПЛА загроза (ключові слова)"
+
+    # No city match but explicit threat — mark as ambiguous for AI
+    return None, ""
+
+
 def build_ai_prompt(text: str, city: str, region: str) -> str:
     return (
         "Ти класифікатор повідомлень про повітряні загрози.\n"
@@ -50,6 +90,14 @@ async def ai_classify(text: str, cfg: dict) -> tuple[bool, str]:
     """Ask AI: is this a UAV threat for the configured city?"""
     city = cfg.get("city", "Олександрія")
     region = cfg.get("city_region", "Кіровоградська область")
+
+    # Fast path: keyword classifier (reliable, no AI needed)
+    city_keywords = cfg.get("city_keywords", [city])
+    kw_result, kw_reason = keyword_classify(text, city_keywords)
+    if kw_result is not None:
+        log.info(f"Keyword pre-classify: threat={kw_result}, reason={kw_reason}")
+        return kw_result, kw_reason
+
     prompt = build_ai_prompt(text, city, region)
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
