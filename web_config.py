@@ -2101,7 +2101,7 @@ async function tunLoadStatus() {
 
 // ── CHAT CONSULTANT ──────────────────────────────────────────────────────────
 let _chatOpen = false;
-const _CHAT_WELCOME = `👋 Привіт! Я консультант UAV Watcher.\n\nОбери тип загрози нижче або задай питання — я поясню що робити.`;
+const _CHAT_WELCOME = `Моніторю {city} 24/7.\n\nПитай про загрози, укриття або що робити просто зараз.`;
 
 function toggleChat() {
   _chatOpen = !_chatOpen;
