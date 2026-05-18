@@ -19,9 +19,9 @@ PROXY_MODEL = os.getenv("PROXY_MODEL", "docs-assistant-proxy")
 _PROJECT_ROOT = pathlib.Path(__file__).parent.parent.parent
 
 _WEB_SEARCH_KEYWORDS = [
-    "де ", "найближч", "бомбосховищ", "укрит", "зараз", "ситуаці",
+    "де ", "найближч", "бомбосховищ", "укрит",
     "новин", "адрес", "знайти", "поруч", "where", "shelter",
-    "nearest", "news", "current", "address", "find", "nearby",
+    "nearest", "news", "address", "find", "nearby",
 ]
 
 _SHELTER_MARKERS = [
@@ -328,11 +328,29 @@ def _read_recent_events(hours: int = 6) -> str:
             snippet = (ev.get("message_text", "") or "")[:120]
             label = "ВІДБІЙ" if ev.get("is_allclear") else ttype.upper()
             lines.append(f"[{ts}] {label} ({ch}): {snippet}")
-        last = recent[-1]
-        if last.get("is_allclear"):
-            cur = "ВІДБІЙ — активної тривоги немає"
-        else:
-            cur = f"ТРИВОГА АКТИВНА ({last.get('threat_type','').upper()})"
+        # Post-strike summaries ("ЗБИТО/ПОДАВЛЕНО X БПЛА") arrive AFTER all-clear and
+        # must not override it — skip them when determining current state
+        def _is_poststrike(ev):
+            t = (ev.get("message_text") or "").lower()
+            return any(p in t for p in [
+                "збито", "подавлено",          # "ЗБИТО/ПОДАВЛЕНО X БПЛА"
+                "у ніч на", "за ніч", "минулої ночі", "за добу",
+                "за даними командування",       # Air Force post-attack reports
+                "завдали комбінованого",        # past-tense attack description
+                "завдав комбінованого",
+                "напрямок удару",               # attack direction summary
+                "ракет наземного базування",    # technical summary language
+                "радіотехнічні війська",        # air force technical report
+            ])
+
+        cur = "Даних про стан тривоги немає"
+        for ev in reversed(recent):
+            if ev.get("is_allclear"):
+                cur = "ВІДБІЙ — активної тривоги немає"
+                break
+            if not _is_poststrike(ev):
+                cur = f"ТРИВОГА АКТИВНА ({ev.get('threat_type','').upper()})"
+                break
         lines.append(f"\n>> Поточний стан: {cur}")
         return "\n".join(lines)
     except Exception:
@@ -352,9 +370,10 @@ def retrieve_kb(state: CrisisState) -> dict:
     # Enrich with extended 6h history for explicit status queries
     if any(m in query.lower() for m in _STATUS_MARKERS):
         db_events = _read_recent_events(hours=6)
-        if db_events and not recent_2h:
+        if db_events:
             db_ctx = "Останні події з моніторингу каналів (за 6 год):\n" + db_events
-            situation = (db_ctx + "\n\n" + situation) if situation else db_ctx
+            if not recent_2h:
+                situation = (db_ctx + "\n\n" + situation) if situation else db_ctx
         elif not situation and not recent_2h:
             situation = "За останні 6 год загроз у моніторингу каналів не зафіксовано."
 
@@ -461,6 +480,9 @@ def retrieve_kb(state: CrisisState) -> dict:
 def web_search(state: CrisisState) -> dict:
     """DuckDuckGo search — triggered for location/current-info queries."""
     query_lower = state["query"].lower()
+    # Status queries rely only on local DB — DuckDuckGo returns stale news
+    if any(m in query_lower for m in _STATUS_MARKERS):
+        return {"web_context": ""}
     should_search = any(kw in query_lower for kw in _WEB_SEARCH_KEYWORDS)
     if not should_search:
         return {"web_context": ""}
@@ -471,7 +493,7 @@ def web_search(state: CrisisState) -> dict:
             from duckduckgo_search import DDGS
         with DDGS(timeout=5) as ddgs:
             results = list(ddgs.text(
-                state["query"] + " Україна укриття безпека",
+                state["query"] + " Україна" + (" укриття безпека" if _is_shelter_query(query_lower) else ""),
                 region="ua-uk",
                 max_results=3,
             ))
