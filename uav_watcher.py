@@ -16,9 +16,19 @@ from geo_monitor import build_pattern_from_locations
 
 load_dotenv()
 
-# Dedup: suppress duplicate notifications within cooldown window
+# Dedup: suppress duplicates, allow escalation bypass
 _last_notify_time: float = 0.0
-_NOTIFY_COOLDOWN_SEC = 90  # seconds between per-message alerts
+_last_notify_level: int = 0
+_NOTIFY_COOLDOWN_SEC = 90  # seconds between same-or-lower-level alerts
+
+def _infer_level(text: str, reason: str) -> int:
+    """Infer threat level 1-3 from text/reason keywords."""
+    combined = (text + " " + reason).lower()
+    if any(k in combined for k in ("вибух", "прямо над", "над містом", "над нами", "над головою")):
+        return 3
+    if any(k in combined for k in ("у місті", "по місту", "в напрямку міста", "тривога у місті")):
+        return 2
+    return 1
 
 logging.basicConfig(
     level=logging.INFO,
@@ -170,14 +180,18 @@ async def ai_classify(text: str, cfg: dict) -> tuple[bool, str]:
 
 async def send_notification(text: str, reason: str, cfg: dict):
     """Send alert via Telegram Bot API (with dedup cooldown)."""
-    global _last_notify_time
+    global _last_notify_time, _last_notify_level
     import time
     now = time.monotonic()
     elapsed = now - _last_notify_time
-    if elapsed < _NOTIFY_COOLDOWN_SEC:
-        log.info(f"[dedup] suppressed (cooldown {_NOTIFY_COOLDOWN_SEC}s, elapsed {elapsed:.0f}s): {reason}")
+    level = _infer_level(text, reason)
+    if elapsed < _NOTIFY_COOLDOWN_SEC and level <= _last_notify_level:
+        log.info(f"[dedup] suppressed L{level}<=L{_last_notify_level} elapsed={elapsed:.0f}s: {reason}")
         return
+    if level > _last_notify_level:
+        log.info(f"[dedup] escalation L{_last_notify_level}→L{level}, bypass cooldown")
     _last_notify_time = now
+    _last_notify_level = level
     city = cfg.get("city", "ВашеМісто").upper()
     # Escape special markdown chars in original text
     safe_text = text.replace("_", "\\_").replace("*", "\\*").replace("[", "\\[").replace("`", "\\`")
