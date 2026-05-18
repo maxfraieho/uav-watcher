@@ -546,6 +546,7 @@ async def main():
                 f"https://api.telegram.org/bot{cfg['bot_token']}/setMyCommands",
                 json={
                     "commands": [
+                        {"command": "start",         "description": "▶️ Головне меню та типові ситуації"},
                         {"command": "shelter",       "description": "🏠 Найближчі укриття"},
                         {"command": "ok",            "description": "✅ Я в порядку"},
                         {"command": "sos",           "description": "🆘 Потрібна допомога"},
