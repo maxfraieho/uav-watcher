@@ -30,6 +30,8 @@ _SHELTER_MARKERS = [
     "де сховатись", "де сховатися", "бомбосховище поблизу",
     "підвал поблизу", "де ховатись", "shelter nearby",
     "найближче бомбосховище", "де є укриття",
+    # Partial/typo variants
+    "де укр", "де схов", "де безпечн", "де захист",
 ]
 
 
@@ -37,12 +39,17 @@ def _is_shelter_query(text: str) -> bool:
     tl = text.lower()
     if any(m in tl for m in _SHELTER_MARKERS):
         return True
-    # Looser match: shelter keyword + search intent anywhere in text
-    has_shelter = any(w in tl for w in ["укрит", "сховищ", "бомбосховищ"])
+    # Shelter stem match (covers typos like "унриття" → close to "укрит")
+    _shelter_stems = ["укрит", "укрот", "укрыт", "сховищ", "схованк",
+                      "сховат", "бомбосховищ", "де захист", "де безпечн"]
+    has_shelter = any(w in tl for w in _shelter_stems)
     has_intent = any(w in tl for w in [
         "де", "знайд", "поблиз", "список", "всі", "є ", "покаж", "адрес",
-        "near", "find", "show", "list",
+        "near", "find", "show", "list", "куди", "коли", "як",
     ])
+    # Short query with shelter stem = almost certainly a shelter request
+    if has_shelter and len(tl.strip()) < 25:
+        return True
     return has_shelter and has_intent
 
 SYSTEM_PROMPT = """Ти — Шарон, кризовий гід по безпеці, моніториш повітряні загрози в Україні.
