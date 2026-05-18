@@ -324,6 +324,21 @@ def retrieve_kb(state: CrisisState) -> dict:
             from db.models import DB_PATH
             session_id = state.get("session_id", "")
             lat, lon = None, None
+            # Web session (UUID) — no GPS available, redirect to Telegram bot
+            _is_tg_session = session_id and session_id.lstrip("-").isdigit()
+            if not _is_tg_session:
+                try:
+                    _cfg_data = _json.loads((_PROJECT_ROOT / "config.json").read_text(encoding="utf-8"))
+                    _bot_uname = _cfg_data.get("bot_username", "")
+                except Exception:
+                    _bot_uname = ""
+                _bot_link = f"[@{_bot_uname}](https://t.me/{_bot_uname})" if _bot_uname else "нашому Telegram-боту"
+                _redirect = (
+                    "📍 Для пошуку укриттів поруч мені потрібна твоя геолокація.\n\n"
+                    f"Напиши {_bot_link} — там натисни 📎 → *Геолокація* → *Поточне місцезнаходження*.\n\n"
+                    "Знайду найближчі укриття точно для твого місця, а не від центру міста."
+                )
+                return {"kb_context": _redirect, "reply": _redirect}
             if session_id and session_id.lstrip("-").isdigit():
                 conn = _sqlite3.connect(DB_PATH)
                 row = conn.execute(
