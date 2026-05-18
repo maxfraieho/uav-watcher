@@ -1,9 +1,50 @@
+# Credentials & secrets
 .env
-*.session
-*.session-journal
-__pycache__/
-.cloudflared/
-data/
+.env.*
 config.json
+*.key
+*.pem
+*.p12
+auth_token*
+
+# Telegram session files
 *.session
 *.session-journal
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Databases (contain private/operational data)
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+
+# Runtime data files
+situation_context.json
+channel_summary.json
+consultant/memory/channel_summary.json
+families_locations.json
+
+# Logs (may contain channel message content)
+*.log
+logs/
+
+# Local data directories
+data/
+.cloudflared/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
