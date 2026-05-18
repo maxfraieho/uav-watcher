@@ -1,0 +1,15 @@
+{
+  "city": "ВашеМісто",
+  "city_region": "Ваша область",
+  "city_keywords": ["ВашеМісто", "ВашеМісто2"],
+  "city_lat": 0.0,
+  "city_lon": 0.0,
+  "city_radius_km": 30,
+  "channels": [-1001234567890],
+  "bot_token": "YOUR_BOT_TOKEN",
+  "notify_chat_id": 123456789,
+  "llm_proxy_url": "https://integrate.api.nvidia.com/v1",
+  "llm_proxy_token": "nvapi-YOUR_KEY",
+  "llm_proxy_model": "meta/llama-4-maverick-17b-128e-instruct",
+  "goclaw_model": "fast-proxy"
+}
