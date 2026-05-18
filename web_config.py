@@ -179,7 +179,7 @@ def resolve_via_bot_api(handle: str, bot_token: str) -> dict:
 def restart_service():
     try:
         result = subprocess.run(
-            ["sudo", "rc-service", "Sharon", "restart"],
+            ["sudo", "rc-service", "uav-watcher", "restart"],
             capture_output=True, text=True, timeout=10
         )
         return result.returncode == 0, result.stdout + result.stderr
@@ -2596,7 +2596,7 @@ class Handler(BaseHTTPRequestHandler):
         cfg = load_config()
         env = load_env()
         try:
-            result = subprocess.run(["sudo", "rc-service", "Sharon", "status"],
+            result = subprocess.run(["sudo", "rc-service", "uav-watcher", "status"],
                                      capture_output=True, text=True, timeout=5)
             running = "started" in result.stdout or "running" in result.stdout
         except Exception:
