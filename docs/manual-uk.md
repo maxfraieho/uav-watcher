@@ -170,7 +170,7 @@ http://localhost:8422
 Коли ви налаштуєте Cloudflare Tunnel (розділ 9), ви отримаєте публічне посилання вигляду:
 
 ```
-https://вашпрефікс-alert.exodus.pp.ua/share
+https://вашпрефікс-alert.your-domain.example/share
 ```
 
 Це посилання можна:
@@ -249,7 +249,7 @@ https://вашпрефікс-alert.exodus.pp.ua/share
 
 ### Як активувати
 
-1. Відкрийте публічну сторінку: `https://вашпрефікс-alert.exodus.pp.ua/share`
+1. Відкрийте публічну сторінку: `https://вашпрефікс-alert.your-domain.example/share`
 2. Прокрутіть до картки **⚠️ Сигнал рятувальника**
 3. Натисніть **🛡️ Увімкнути захист**
 4. Браузер запитає дозвіл на геолокацію — підтвердіть
@@ -299,14 +299,14 @@ https://вашпрефікс-alert.exodus.pp.ua/share
 
 **Крок 1.** Домовтесь із сусідами, у яких теж є UAV Watcher.
 
-**Крок 2.** Обміняйтесь публічними посиланнями ваших тунелів (наприклад: `https://іванко-alert.exodus.pp.ua`).
+**Крок 2.** Обміняйтесь публічними посиланнями ваших тунелів (наприклад: `https://іванко-alert.your-domain.example`).
 
 **Крок 3.** Додайте посилання сусідів у `config.json`:
 
 ```json
 "rescue_peers": [
-  "https://іванко-alert.exodus.pp.ua",
-  "https://maria22-alert.exodus.pp.ua"
+  "https://іванко-alert.your-domain.example",
+  "https://maria22-alert.your-domain.example"
 ]
 ```
 
@@ -343,12 +343,12 @@ Tunnel дозволяє родині у будь-якій точці світу 
 
 Ваше посилання буде:
 ```
-https://rodyna-alert.exodus.pp.ua
+https://rodyna-alert.your-domain.example
 ```
 
 Сторінка для родини:
 ```
-https://rodyna-alert.exodus.pp.ua/share
+https://rodyna-alert.your-domain.example/share
 ```
 
 ### QR-код

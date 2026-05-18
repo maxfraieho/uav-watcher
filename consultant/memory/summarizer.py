@@ -60,7 +60,7 @@ def _get_llm_config() -> tuple[str, str, str]:
         return url, token, model
     except Exception:
         return (
-            os.getenv("PROXY_URL", "https://openai-proxy.exodus.pp.ua/v1").rstrip("/"),
+            os.getenv("PROXY_URL", "https://YOUR_PROXY_URL/v1").rstrip("/"),
             os.getenv("PROXY_TOKEN", "freecc"),
             os.getenv("PROXY_MODEL", "docs-assistant-proxy"),
         )

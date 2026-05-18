@@ -111,7 +111,7 @@ echo ""
 echo "  Для класифікації загроз використовується AI-проксі."
 echo ""
 echo -e "  ${GREEN}[1] Спільний проксі (за замовчуванням)${NC} — безкоштовно, не потрібен ключ"
-echo -e "      ${CYAN}openai-proxy.exodus.pp.ua${NC}"
+echo -e "      ${CYAN}YOUR_PROXY_HOST${NC}"
 echo -e "  ${YELLOW}[2] Свій AI endpoint${NC} — OpenAI, Groq, OpenRouter або власний сервер"
 echo ""
 ask "Вибір (Enter = 1, спільний проксі):"
@@ -127,10 +127,10 @@ if [ "$AI_CHOICE" = "2" ]; then
     AI_MODEL="${AI_MODEL:-gpt-4o-mini}"
     success "Використовуватиметься власний AI endpoint"
 else
-    AI_URL="https://openai-proxy.exodus.pp.ua/v1/chat/completions"
+    AI_URL="https://YOUR_PROXY_URL/v1/chat/completions"
     AI_KEY="freecc"
     AI_MODEL="fast-proxy"
-    success "Використовуватиметься спільний AI проксі (openai-proxy.exodus.pp.ua)"
+    success "Використовуватиметься спільний AI проксі (YOUR_PROXY_HOST)"
 fi
 
 # Генерація keywords з назви міста

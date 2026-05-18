@@ -195,7 +195,7 @@ import random as _random
 
 CLOUDFLARED_DIR = os.path.join(os.path.dirname(__file__), ".cloudflared")
 _CF_TUNNEL_ID_FALLBACK = "c0413dca-1f1d-4176-be39-23e2c8f0754f"
-CF_DOMAIN       = "exodus.pp.ua"
+CF_DOMAIN       = "your-domain.example"
 CF_SUFFIX       = "-alert"
 CF_TUNNEL_CFG   = "/tmp/uav-watcher-tunnel.yml"
 
@@ -1725,7 +1725,7 @@ HTML = """<!DOCTYPE html>
         <form method="POST" action="/save-llm">
           <div class="field-group">
             <label class="field-label">Proxy URL</label>
-            <input class="input" name="llm_proxy_url" value="{llm_proxy_url}" placeholder="https://openai-proxy.exodus.pp.ua/v1">
+            <input class="input" name="llm_proxy_url" value="{llm_proxy_url}" placeholder="https://YOUR_PROXY_URL/v1">
           </div>
           <div class="field-group">
             <label class="field-label">API Token</label>
@@ -1871,7 +1871,7 @@ HTML = """<!DOCTYPE html>
               <button class="btn btn-ghost" style="height:34px;font-size:18px;padding:0 10px" onclick="tunGenPrefix()" title="Згенерувати">⚂</button>
             </div>
           </div>
-          <div class="hint" style="margin-bottom:8px">URL: <code id="tun-preview" style="color:var(--accent)">?????-alert.exodus.pp.ua</code></div>
+          <div class="hint" style="margin-bottom:8px">URL: <code id="tun-preview" style="color:var(--accent)">?????-alert.your-domain.example</code></div>
           <div id="tun-check-res" style="display:none;margin-bottom:8px"></div>
           <div class="btn-row" style="margin-bottom:4px">
             <button class="btn btn-primary" style="height:30px;font-size:10px" onclick="tunStart()" id="tun-start-btn" data-i18n="btn_tunnel_start">Запустити тунель</button>
@@ -2015,7 +2015,7 @@ async function sendTest() {
 // ── Tunnel management ─────────────────────────────────────────────────────────
 function tunUpdatePreview() {
   const v = (document.getElementById('tun-prefix').value.trim().toLowerCase() || '?????');
-  document.getElementById('tun-preview').textContent = v + '-alert.exodus.pp.ua';
+  document.getElementById('tun-preview').textContent = v + '-alert.your-domain.example';
 }
 function tunGenPrefix() {
   const p = Array.from({length:5}, () => 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random()*26)]).join('');

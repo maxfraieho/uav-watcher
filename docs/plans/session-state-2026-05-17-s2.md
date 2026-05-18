@@ -20,7 +20,7 @@
 - POST endpoint `/save-llm` — зберігає в config.json
 - `consultant/pipeline/nodes.py` читає `llm_proxy_*` з config.json в рантаймі
 - `shelter_ai_query()` використовує `llm_proxy_url` (fallback: `goclaw_url`)
-- Поточні налаштування: `https://openai-proxy.exodus.pp.ua/v1`, token: `freecc`, model: `docs-assistant-proxy`
+- Поточні налаштування: `https://YOUR_PROXY_URL/v1`, token: `freecc`, model: `docs-assistant-proxy`
 
 ### ✅ Перевірено (curl)
 
@@ -79,7 +79,7 @@ POST localhost:8770/chat {"message": "балістична ракета що р�
 - Repo: `~/projects/uav-watcher/`
 - Web UI admin: `http://localhost:8422`
 - Consultant: `http://localhost:8770`
-- LLM Proxy: `https://openai-proxy.exodus.pp.ua/v1`
+- LLM Proxy: `https://YOUR_PROXY_URL/v1`
 - Запуск: `setsid python3 web_config.py &` та `setsid python3 consultant/main.py &`
 
 ---

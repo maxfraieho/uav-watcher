@@ -12,7 +12,7 @@ Python Telegram monitoring bot + web config UI for civilian UAV/rocket alert tra
 
 ## Cloudflare Tunnel
 - Tunnel name: `uav-watcher-alerts`, ID: `c0413dca-1f1d-4176-be39-23e2c8f0754f`
-- Wildcard DNS: `*.exodus.pp.ua` — users pick prefix → `{prefix}-alert.exodus.pp.ua`
+- Wildcard DNS: `*.your-domain.example` — users pick prefix → `{prefix}-alert.your-domain.example`
 - Credentials in `.cloudflared/` (gitignored: private keys)
 - Start via web UI → Tunnel card → enter prefix → Start
 
@@ -44,12 +44,12 @@ Python Telegram monitoring bot + web config UI for civilian UAV/rocket alert tra
 - No central server needed; bootstrap by sharing tunnel URLs
 
 ## AI / LLM
-- Model: `docs-assistant-proxy` via `https://openai-proxy.exodus.pp.ua/v1/chat/completions`
+- Model: `docs-assistant-proxy` via `https://YOUR_PROXY_URL/v1/chat/completions`
 - API key: `freecc` (from config.json `goclaw_api_key`)
 - **IMPORTANT**: urllib requests to this endpoint require `"User-Agent": "curl/7.88.1"` header — Cloudflare WAF blocks Python-urllib default UA
 
 ## Known quirks
-- `socket.getaddrinfo()` doesn't work for conflict check (wildcard DNS `*.exodus.pp.ua` resolves everything) — uses local URL check instead
+- `socket.getaddrinfo()` doesn't work for conflict check (wildcard DNS `*.your-domain.example` resolves everything) — uses local URL check instead
 - Overpass API requires `"User-Agent": "UAVWatcher/1.0"` header — returns 406 without it
 - SSH background start sometimes returns exit 255 (nohup exits before SSH closes) — service does start, check with `pgrep -f web_config.py`
 

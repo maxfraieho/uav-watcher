@@ -60,7 +60,7 @@ Passwords and tokens are in `.env` and `config.json` — NEVER hardcode them in 
 ## 🔧 Cloudflare Tunnel
 
 - Tunnel ID: in `.cloudflared/` (gitignored) and `config.json`
-- Wildcard DNS: `*.exodus.pp.ua` — users pick prefix → `{prefix}-alert.exodus.pp.ua`
+- Wildcard DNS: `*.your-domain.example` — users pick prefix → `{prefix}-alert.your-domain.example`
 - **CRITICAL:** `CF_TUNNEL_ID` in `web_config.py` is hardcoded — should be moved to `config.json`
 - `tunnel_pid` stored in `config.json` — fragile, check with `/proc/{pid}/cmdline`
 
@@ -131,7 +131,7 @@ Passwords and tokens are in `.env` and `config.json` — NEVER hardcode them in 
 
 ## ⚙️ Known quirks
 
-- `socket.getaddrinfo()` doesn't work for tunnel conflict check — wildcard `*.exodus.pp.ua` resolves everything.
+- `socket.getaddrinfo()` doesn't work for tunnel conflict check — wildcard `*.your-domain.example` resolves everything.
   `web_config.py` checks against stored URL instead.
 - Overpass API requires `"User-Agent": "UAVWatcher/1.0"` — returns 406 without it.
 - AI proxy requires `"User-Agent": "curl/7.88.1"` for urllib requests — Cloudflare WAF blocks Python default UA.
