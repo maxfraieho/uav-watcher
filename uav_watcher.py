@@ -664,6 +664,10 @@ async def main():
     from rescue.location_tracker import register_location_handlers
     register_location_handlers(bot_app, cfg, user_client=client)
 
+    # --- VOICE TRANSCRIPTION (Groq Whisper) ---
+    from rescue.voice_handler import register_voice_handlers
+    register_voice_handlers(bot_app, cfg)
+
     await asyncio.gather(
         client.run_until_disconnected(),
         bot_app.run_until_disconnected()
