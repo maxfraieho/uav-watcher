@@ -271,13 +271,19 @@ def retrieve_kb(state: CrisisState) -> dict:
     query = state["query"]
     situation = read_situation(_PROJECT_ROOT)
 
-    # Enrich situation with local channel monitoring data for status queries
+    # Always inject very recent events (2h) so any query has threat context
+    recent_2h = _read_recent_events(hours=2)
+    if recent_2h:
+        recent_prefix = "⚡ Останні події з моніторингу каналів (2 год):\n" + recent_2h
+        situation = (recent_prefix + "\n\n" + situation) if situation else recent_prefix
+
+    # Enrich with extended 6h history for explicit status queries
     if any(m in query.lower() for m in _STATUS_MARKERS):
         db_events = _read_recent_events(hours=6)
-        if db_events:
+        if db_events and not recent_2h:
             db_ctx = "Останні події з моніторингу каналів (за 6 год):\n" + db_events
             situation = (db_ctx + "\n\n" + situation) if situation else db_ctx
-        elif not situation:
+        elif not situation and not recent_2h:
             situation = "За останні 6 год загроз у моніторингу каналів не зафіксовано."
 
     crisis_state = detect_crisis_state(query)
