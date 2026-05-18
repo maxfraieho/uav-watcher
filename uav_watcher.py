@@ -516,6 +516,10 @@ async def main():
         """Route any private text message to Sharon consultant."""
         user_text = event.text.strip()
         session_id = str(event.sender_id)
+        # Shelter query without geolocation → ask for GPS
+        if any(kw in user_text.lower() for kw in _SHELTER_KEYWORDS):
+            await event.respond(_SHELTER_GEO_MSG, parse_mode='md')
+            return
         try:
             async with httpx.AsyncClient(timeout=30.0) as hc:
                 resp = await hc.post(
@@ -533,6 +537,24 @@ async def main():
     # --- FAMILY HANDLERS (Task 1.2) ---
     from family.bot_handlers import register_family_handlers
     register_family_handlers(bot_app, cfg, user_client=client)
+
+    # --- SHELTER COMMAND ---
+    _SHELTER_GEO_MSG = (
+        "📍 *Де ти зараз?*\n\n"
+        "Надішли свою геолокацію — знайду найближчі укриття саме для тебе.\n\n"
+        "*Як надіслати:*\n"
+        "• Натисни 📎 (скрепка) → *Геолокація*\n"
+        "• або: «+» → *Місцезнаходження* → *Поточне місцезнаходження*\n\n"
+        "_Без точної геолокації покажу укриття лише від центру міста — вони можуть бути далеко від тебе._"
+    )
+    _SHELTER_KEYWORDS = (
+        "де укриття", "де укриття", "де сховат", "де ховатись", "де сховатись",
+        "найближч укрит", "бомбосховищ", "/shelter",
+    )
+
+    @bot_app.on(events.NewMessage(pattern=r'^/shelter'))
+    async def cmd_shelter(event):
+        await event.respond(_SHELTER_GEO_MSG, parse_mode='md')
 
     # --- LOCATION TRACKER (Task 2.1) ---
     from rescue.location_tracker import register_location_handlers
