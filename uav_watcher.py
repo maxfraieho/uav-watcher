@@ -23,6 +23,29 @@ _NOTIFY_COOLDOWN_SEC = 90  # seconds between same-or-lower-level alerts
 _last_allclear_time: float = 0.0
 _ALLCLEAR_COOLDOWN_SEC = 300  # 5 min between all-clear notifications
 _active_threat: bool = False  # True only after a threat was actually sent to user
+_STATE_FILE = os.path.join(os.path.dirname(__file__), "data", "threat_state.json")
+
+def _save_threat_state(active: bool) -> None:
+    import time as _t
+    try:
+        os.makedirs(os.path.dirname(_STATE_FILE), exist_ok=True)
+        with open(_STATE_FILE, "w") as _f:
+            import json as _j
+            _j.dump({"active": active, "ts": _t.time()}, _f)
+    except Exception as _e:
+        log.warning(f"threat_state write failed: {_e}")
+
+def _load_threat_state() -> bool:
+    import time as _t
+    try:
+        with open(_STATE_FILE) as _f:
+            import json as _j
+            d = _j.load(_f)
+        if _t.time() - d.get("ts", 0) > 14400:  # >4h → treat as expired
+            return False
+        return bool(d.get("active", False))
+    except Exception:
+        return False
 
 def _infer_level(text: str, reason: str) -> int:
     """Infer threat level 1-3 from text/reason keywords."""
@@ -225,6 +248,7 @@ async def send_notification(text: str, reason: str, cfg: dict, channel_name: str
             )
             resp.raise_for_status()
             _active_threat = True
+            _save_threat_state(True)
             log.info(f"Notification sent L{level}: {reason}")
     except Exception as e:
         log.error(f"Send notification error: {e}")
@@ -254,6 +278,7 @@ async def send_allclear_notification(cfg: dict):
             )
             resp.raise_for_status()
             _active_threat = False
+            _save_threat_state(False)
             log.info("All-clear notification sent")
     except Exception as e:
         log.error(f"Send all-clear error: {e}")
@@ -263,6 +288,10 @@ async def main():
     from db.models import init_db
     init_db()
 
+    global _active_threat
+    _active_threat = _load_threat_state()
+    if _active_threat:
+        log.info("[startup] Restored _active_threat=True from state file")
     cfg = load_config()
     city = cfg.get("city", "Олександрія")
     keywords = cfg.get("city_keywords", [city])
