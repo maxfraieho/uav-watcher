@@ -65,10 +65,16 @@ def register_family_handlers(bot_client, cfg, user_client=None):
 
     init_db()
 
-    @bot_client.on(events.NewMessage(pattern=r'/family_create (.+)'))
+    @bot_client.on(events.NewMessage(pattern=r'^/family_create(.*)'))
     async def cmd_family_create(event):
         sender = await event.get_sender()
-        name = event.pattern_match.group(1).strip()
+        name = (event.pattern_match.group(1) or "").strip()
+        if not name:
+            await event.respond(
+                "Вкажи назву сімейної групи:\n`/family_create Моя родина`",
+                parse_mode='md'
+            )
+            return
         family = create_family(name, sender.id)
         await event.respond(
             f"Сімейну групу створено!\n\n"
@@ -79,10 +85,16 @@ def register_family_handlers(bot_client, cfg, user_client=None):
             parse_mode='md'
         )
 
-    @bot_client.on(events.NewMessage(pattern=r'/family_join (.+)'))
+    @bot_client.on(events.NewMessage(pattern=r'^/family_join(.*)'))
     async def cmd_family_join(event):
         sender = await event.get_sender()
-        code = event.pattern_match.group(1).strip().upper()
+        code = (event.pattern_match.group(1) or "").strip().upper()
+        if not code:
+            await event.respond(
+                "Вкажи код запрошення:\n`/family_join КОД`",
+                parse_mode='md'
+            )
+            return
         name = f"{sender.first_name or ''} {sender.last_name or ''}".strip() or "Учасник"
         family = join_family(code, sender.id, sender.username, name)
         if family:
