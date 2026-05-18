@@ -35,11 +35,32 @@ _SHELTER_MARKERS = [
 ]
 
 
+_SHELTER_FUZZY_WORDS = ["укриття", "укритись", "укритися", "сховище", "бомбосховище"]
+
+
+def _shelter_fuzzy(text: str, threshold: float = 0.75) -> bool:
+    """Fuzzy match: catches one-letter typos like унриття→укриття."""
+    import difflib
+    words = [w.strip("?!.,") for w in text.lower().split()]
+    for word in words:
+        if len(word) < 5:
+            continue
+        for sw in _SHELTER_FUZZY_WORDS:
+            if abs(len(word) - len(sw)) > 2:
+                continue
+            if difflib.SequenceMatcher(None, word, sw).ratio() >= threshold:
+                return True
+    return False
+
+
 def _is_shelter_query(text: str) -> bool:
     tl = text.lower()
     if any(m in tl for m in _SHELTER_MARKERS):
         return True
-    # Shelter stem match (covers typos like "унриття" → close to "укрит")
+    # Fuzzy: catches 1-char typos (унриття, укрития, сховиче, etc.)
+    if _shelter_fuzzy(tl):
+        return True
+    # Shelter stem match
     _shelter_stems = ["укрит", "укрот", "укрыт", "сховищ", "схованк",
                       "сховат", "бомбосховищ", "де захист", "де безпечн"]
     has_shelter = any(w in tl for w in _shelter_stems)
@@ -47,7 +68,6 @@ def _is_shelter_query(text: str) -> bool:
         "де", "знайд", "поблиз", "список", "всі", "є ", "покаж", "адрес",
         "near", "find", "show", "list", "куди", "коли", "як",
     ])
-    # Short query with shelter stem = almost certainly a shelter request
     if has_shelter and len(tl.strip()) < 25:
         return True
     return has_shelter and has_intent
