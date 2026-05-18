@@ -536,7 +536,7 @@ async def main():
 
     # --- LOCATION TRACKER (Task 2.1) ---
     from rescue.location_tracker import register_location_handlers
-    register_location_handlers(bot_app, cfg)
+    register_location_handlers(bot_app, cfg, user_client=client)
 
     await asyncio.gather(
         client.run_until_disconnected(),

@@ -55,10 +55,9 @@ def get_last_location(user_id: int):
     return None
 
 
-def register_location_handlers(bot_client, cfg):
+def register_location_handlers(bot_client, cfg, user_client=None):
     """Register /checkin and location message handlers on the bot client."""
     from telethon import events
-    import httpx
 
     @bot_client.on(events.NewMessage(pattern='/checkin|/чекін'))
     async def cmd_checkin_prompt(event):
@@ -72,13 +71,21 @@ def register_location_handlers(bot_client, cfg):
 
     @bot_client.on(events.NewMessage(func=lambda e: e.geo is not None))
     async def handle_location_message(event):
+        import sys as _sys, os as _os
         geo = event.geo
         sender = await event.get_sender()
         save_checkin(sender.id, geo.lat, geo.long)
-        await event.respond(
-            "✅ Геолокацію збережено.\n"
-            "Якщо ти не відповіси на rollcall протягом 10 хвилин — "
-            "рідні отримають посилання на твоє місцезнаходження."
-        )
+
+        await event.respond("📍 Геолокацію збережено. Шукаю укриття поблизу...")
+
+        _sys.path.insert(0, _os.path.dirname(_os.path.dirname(__file__)))
+        from shelter_search import find_shelters_enhanced, format_shelters_for_chat
+        try:
+            shelters = await find_shelters_enhanced(user_client, geo.lat, geo.long)
+            text = format_shelters_for_chat(shelters)
+        except Exception as e:
+            log.error(f"auto-shelter lookup: {e}")
+            text = "Помилка пошуку укриттів. Використай @UkraineShelterStfalconBot"
+        await event.respond(text)
 
     log.info("Location tracker handlers registered.")
