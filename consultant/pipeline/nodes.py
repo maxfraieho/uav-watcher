@@ -233,10 +233,15 @@ def _format_offline(kb_context: str, query: str) -> str:
 
 
 _STATUS_MARKERS = [
+    # Explicit status queries
     "відбій", "тривога зараз", "загроз зараз", "безпечно зараз",
     "зараз загроза", "що зараз", "поточна ситуація", "вже відбій",
     "чи є тривога", "яка ситуація", "чи тривога", "чи безпечно",
     "останні події", "що було", "нові повідомлення",
+    # Ukrainian case variants
+    "по загроз", "загрозам", "обстановка", "обстановку", "обстановці",
+    "по тривог", "яка тривога", "яка обстановка", "що відбув",
+    "що сталос", "що трапил", "як зараз", "що по ", "поточн",
 ]
 
 
@@ -250,7 +255,7 @@ def _read_recent_events(hours: int = 6) -> str:
         if not evs:
             return ""
         lines = []
-        for ev in evs[-12:]:
+        for ev in evs[:12]:
             ts = str(ev.get("detected_at", ""))[:16].replace("T", " ")
             ttype = ev.get("threat_type", "")
             ch = ev.get("channel_name", "")
