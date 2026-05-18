@@ -15,6 +15,11 @@ from telethon import TelegramClient, events
 from geo_monitor import build_pattern_from_locations
 
 load_dotenv()
+
+# Dedup: suppress duplicate notifications within cooldown window
+_last_notify_time: float = 0.0
+_NOTIFY_COOLDOWN_SEC = 90  # seconds between per-message alerts
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(message)s",
@@ -164,8 +169,16 @@ async def ai_classify(text: str, cfg: dict) -> tuple[bool, str]:
 
 
 async def send_notification(text: str, reason: str, cfg: dict):
-    """Send alert via Telegram Bot API."""
-    city = cfg.get("city", "Олександрія").upper()
+    """Send alert via Telegram Bot API (with dedup cooldown)."""
+    global _last_notify_time
+    import time
+    now = time.monotonic()
+    elapsed = now - _last_notify_time
+    if elapsed < _NOTIFY_COOLDOWN_SEC:
+        log.info(f"[dedup] suppressed (cooldown {_NOTIFY_COOLDOWN_SEC}s, elapsed {elapsed:.0f}s): {reason}")
+        return
+    _last_notify_time = now
+    city = cfg.get("city", "ВашеМісто").upper()
     # Escape special markdown chars in original text
     safe_text = text.replace("_", "\\_").replace("*", "\\*").replace("[", "\\[").replace("`", "\\`")
     msg = (
