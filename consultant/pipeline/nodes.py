@@ -37,6 +37,43 @@ _SHELTER_MARKERS = [
 
 _SHELTER_FUZZY_WORDS = ["укриття", "укритись", "укритися", "сховище", "бомбосховище"]
 
+# Domain vocabulary for global typo normalization (all queries)
+_QUERY_VOCAB = (
+    "укриття", "укритись", "укритися", "сховище", "бомбосховище",
+    "сховатись", "сховатися", "захист",
+    "тривога", "відбій", "ракета", "загроза", "загрози",
+    "ситуація", "обстановка", "небезпека",
+    "зараз", "поточний", "нині",
+    "знайди", "покажи", "виведи",
+    "найближче",
+)
+
+
+def _normalize_query(text: str) -> str:
+    """Normalize common typos in query words using fuzzy vocab matching.
+
+    Prefers vocab words closest in length to prevent зарза→загроза (prefer зараз).
+    Only normalizes words ≥5 chars to avoid false positives on short words.
+    """
+    import difflib
+    words = text.split()
+    result = []
+    for word in words:
+        clean = word.strip("?!.,;:")
+        if len(clean) < 5:
+            result.append(word)
+            continue
+        matches = difflib.get_close_matches(clean.lower(), _QUERY_VOCAB, n=3, cutoff=0.75)
+        if matches:
+            best = min(matches, key=lambda m: abs(len(m) - len(clean)))
+            if clean[0].isupper():
+                best = best[0].upper() + best[1:]
+            punct = word[len(clean):]
+            result.append(best + punct)
+        else:
+            result.append(word)
+    return " ".join(result)
+
 
 def _shelter_fuzzy(text: str, threshold: float = 0.75) -> bool:
     """Fuzzy match: catches one-letter typos like унриття→укриття."""
@@ -303,7 +340,7 @@ def _read_recent_events(hours: int = 6) -> str:
 
 
 def retrieve_kb(state: CrisisState) -> dict:
-    query = state["query"]
+    query = _normalize_query(state["query"])
     situation = read_situation(_PROJECT_ROOT)
 
     # Always inject very recent events (2h) so any query has threat context
