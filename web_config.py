@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-UAV Watcher — web config UI.
+Sharon — web config UI.
 Run: python3 web_config.py
 Open: http://localhost:8422
 """
@@ -179,7 +179,7 @@ def resolve_via_bot_api(handle: str, bot_token: str) -> dict:
 def restart_service():
     try:
         result = subprocess.run(
-            ["sudo", "rc-service", "uav-watcher", "restart"],
+            ["sudo", "rc-service", "Sharon", "restart"],
             capture_output=True, text=True, timeout=10
         )
         return result.returncode == 0, result.stdout + result.stderr
@@ -197,7 +197,7 @@ CLOUDFLARED_DIR = os.path.join(os.path.dirname(__file__), ".cloudflared")
 _CF_TUNNEL_ID_FALLBACK = "c0413dca-1f1d-4176-be39-23e2c8f0754f"
 CF_DOMAIN       = "your-domain.example"
 CF_SUFFIX       = "-alert"
-CF_TUNNEL_CFG   = "/tmp/uav-watcher-tunnel.yml"
+CF_TUNNEL_CFG   = "/tmp/Sharon-tunnel.yml"
 
 
 def _cf_tunnel_id() -> str:
@@ -576,7 +576,7 @@ SHARE_HTML = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>UAV Watcher — Укриття & Тривоги</title>
+<title>Sharon — Укриття & Тривоги</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}
@@ -644,7 +644,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 <div class="topbar">
   <span class="logo">&#9889;</span>
   <div>
-    <div class="site-title">UAV Watcher</div>
+    <div class="site-title">Sharon</div>
   </div>
   <span class="city-badge" id="cityBadge">{{CITY}}</span>
 </div>
@@ -694,7 +694,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
   <div class="card rescue-card" id="rescueCard">
     <div class="card-title">&#9888;&#65039; Сигнал рятувальника</div>
     <div id="rescueIdle">
-      <p class="rescue-hint">Увімкніть захист перед входом у небезпечну зону. При ударі та нерухомості 30+ с — автоматично подасть звуковий сигнал SOS та надішле координати рятувальникам і сусіднім станціям UAV Watcher.</p>
+      <p class="rescue-hint">Увімкніть захист перед входом у небезпечну зону. При ударі та нерухомості 30+ с — автоматично подасть звуковий сигнал SOS та надішле координати рятувальникам і сусіднім станціям Sharon.</p>
       <button class="btn btn-arm" onclick="armRescue()">&#128737;&#65039; Увімкнути захист</button>
     </div>
     <div id="rescueArmed" style="display:none">
@@ -1049,7 +1049,7 @@ HTML = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>UAV Watcher — Налаштування</title>
+<title>Sharon — Налаштування</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -1816,7 +1816,7 @@ HTML = """<!DOCTYPE html>
               </div>
               <div class="step">
                 <div class="step-num">3</div>
-                <div class="step-text">Введи назву бота (будь-яку, наприклад <code>Мій UAV Watcher</code>)</div>
+                <div class="step-text">Введи назву бота (будь-яку, наприклад <code>Мій Sharon</code>)</div>
               </div>
               <div class="step">
                 <div class="step-num">4</div>
@@ -2596,7 +2596,7 @@ class Handler(BaseHTTPRequestHandler):
         cfg = load_config()
         env = load_env()
         try:
-            result = subprocess.run(["sudo", "rc-service", "uav-watcher", "status"],
+            result = subprocess.run(["sudo", "rc-service", "Sharon", "status"],
                                      capture_output=True, text=True, timeout=5)
             running = "started" in result.stdout or "running" in result.stdout
         except Exception:
@@ -2748,7 +2748,7 @@ class Handler(BaseHTTPRequestHandler):
                 pass
         body = b"<h1>401 Unauthorized</h1><p>Enter admin password.</p>"
         self.send_response(401)
-        self.send_header("WWW-Authenticate", 'Basic realm="UAV Watcher Admin"')
+        self.send_header("WWW-Authenticate", 'Basic realm="Sharon Admin"')
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
@@ -2825,7 +2825,7 @@ class Handler(BaseHTTPRequestHandler):
                 return
 
             if path == "/api/sos-relay":
-                # Incoming SOS from a peer UAV Watcher instance
+                # Incoming SOS from a peer Sharon instance
                 lat      = payload.get("lat")
                 lon      = payload.get("lon")
                 src_city = payload.get("city", "невідома")
@@ -2969,7 +2969,7 @@ class Handler(BaseHTTPRequestHandler):
                 url = f"https://api.telegram.org/bot{token}/sendMessage"
                 payload = json.dumps({
                     "chat_id": chat_id,
-                    "text": "✅ UAV Watcher — тестове повідомлення. Бот налаштовано правильно!",
+                    "text": "✅ Sharon — тестове повідомлення. Бот налаштовано правильно!",
                     "parse_mode": "Markdown"
                 }).encode()
                 req = urllib.request.Request(url, data=payload,
@@ -3064,7 +3064,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    print(f"UAV Watcher Config UI → http://localhost:{PORT}")
+    print(f"Sharon Config UI → http://localhost:{PORT}")
     class ReusableServer(ThreadingHTTPServer):
         allow_reuse_address = True
     server = ReusableServer(("0.0.0.0", PORT), Handler)

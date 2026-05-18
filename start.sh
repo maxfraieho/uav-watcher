@@ -1,5 +1,5 @@
 #!/bin/bash
-# UAV Watcher — start both watcher and web config UI
+# Sharon — start both watcher and web config UI
 cd "$(dirname "$0")"
 
 PYTHON=$(command -v python3 || command -v python)
@@ -15,7 +15,7 @@ WEB_PID=$!
 echo "[UAV] Web Config UI запущено: http://localhost:8422 (PID $WEB_PID)"
 
 # Start watcher (foreground — logs go to stdout)
-echo "[UAV] Запуск UAV Watcher..."
+echo "[UAV] Запуск Sharon..."
 "$PYTHON" uav_watcher.py
 
 # If watcher exits, kill web UI too

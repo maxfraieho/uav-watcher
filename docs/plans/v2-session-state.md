@@ -1,4 +1,4 @@
-# UAV Watcher v2.0 — Session State
+# Sharon v2.0 — Session State
 # Дата: 2026-05-17
 
 ## Статус виконання плану
@@ -44,7 +44,7 @@
 
 ## Що потрібно після рестарту бота
 
-1. Рестарт: `pkill -f uav_watcher.py && cd ~/projects/uav-watcher && nohup python3 uav_watcher.py &`
+1. Рестарт: `pkill -f uav_watcher.py && cd ~/projects/Sharon && nohup python3 uav_watcher.py &`
 2. Якщо є токен alerts.in.ua — додати в `config.json`: `"alerts_ua_token": "ВАШ_ТОКЕН"`
 
 ---
@@ -52,7 +52,7 @@
 ## Структура файлів після Phase 0
 
 ```
-uav-watcher/
+Sharon/
 ├── bot/
 │   ├── __init__.py          ← NEW
 │   └── crisis_templates.py  ← NEW: 7 типів загроз + grounding

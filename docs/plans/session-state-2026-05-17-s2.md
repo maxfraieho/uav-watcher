@@ -1,4 +1,4 @@
-# UAV Watcher — Session State 2026-05-17 (Session 2)
+# Sharon — Session State 2026-05-17 (Session 2)
 
 ## Що зроблено в цій сесії
 
@@ -76,7 +76,7 @@ POST localhost:8770/chat {"message": "балістична ракета що р�
 ## Технічна інфраструктура
 
 - Сервер: `sshpass -p '805235io.' ssh vokov@192.168.3.184`
-- Repo: `~/projects/uav-watcher/`
+- Repo: `~/projects/Sharon/`
 - Web UI admin: `http://localhost:8422`
 - Consultant: `http://localhost:8770`
 - LLM Proxy: `https://YOUR_PROXY_URL/v1`

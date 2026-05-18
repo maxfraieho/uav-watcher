@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3, Telethon 1.41.2, httpx (async HTTP), Telegram Bot API, goclaw OpenAI proxy (localhost:18880, key=freecc, model=fast-proxy)
 
-**Server:** 192.168.3.184, `/home/vokov/projects/uav-watcher/`
+**Server:** 192.168.3.184, `/home/vokov/projects/Sharon/`
 
 ---
 
@@ -29,14 +29,14 @@ curl -s "https://api.telegram.org/bot8660277592:AAEfzH9fq4jM81gyHdgvdNYi1AnXhr1a
 ### Task 1: Ініціалізувати проект
 
 **Files:**
-- Create: `/home/vokov/projects/uav-watcher/config.json`
-- Create: `/home/vokov/projects/uav-watcher/.env`
-- Create: `/home/vokov/projects/uav-watcher/.gitignore`
+- Create: `/home/vokov/projects/Sharon/config.json`
+- Create: `/home/vokov/projects/Sharon/.env`
+- Create: `/home/vokov/projects/Sharon/.gitignore`
 
 **Step 1: Створити config.json**
 
 ```bash
-cat > /home/vokov/projects/uav-watcher/config.json << 'EOF'
+cat > /home/vokov/projects/Sharon/config.json << 'EOF'
 {
   "channels": [-1002187970584],
   "city_keywords": ["Олександрія", "Олександрійськ"],
@@ -52,7 +52,7 @@ EOF
 **Step 2: Створити .env**
 
 ```bash
-cat > /home/vokov/projects/uav-watcher/.env << 'EOF'
+cat > /home/vokov/projects/Sharon/.env << 'EOF'
 TELEGRAM_API_ID=REPLACE_WITH_API_ID
 TELEGRAM_API_HASH=REPLACE_WITH_API_HASH
 TELEGRAM_PHONE=REPLACE_WITH_PHONE
@@ -64,7 +64,7 @@ EOF
 **Step 3: .gitignore**
 
 ```bash
-cat > /home/vokov/projects/uav-watcher/.gitignore << 'EOF'
+cat > /home/vokov/projects/Sharon/.gitignore << 'EOF'
 .env
 *.session
 *.session-journal
@@ -75,7 +75,7 @@ EOF
 **Step 4: Ініціалізувати git**
 
 ```bash
-cd /home/vokov/projects/uav-watcher && git init && git add config.json .gitignore && git commit -m "feat: init uav-watcher project"
+cd /home/vokov/projects/Sharon && git init && git add config.json .gitignore && git commit -m "feat: init Sharon project"
 ```
 
 ---
@@ -83,7 +83,7 @@ cd /home/vokov/projects/uav-watcher && git init && git add config.json .gitignor
 ### Task 2: Авторизація Telethon сесії
 
 **Files:**
-- Create: `/home/vokov/projects/uav-watcher/auth.py`
+- Create: `/home/vokov/projects/Sharon/auth.py`
 
 **Step 1: Написати auth.py**
 
@@ -119,7 +119,7 @@ pip3 install python-dotenv --quiet
 **Step 3: Запустити авторизацію (інтерактивно — потрібен термінал)**
 
 ```bash
-cd /home/vokov/projects/uav-watcher && python3 auth.py
+cd /home/vokov/projects/Sharon && python3 auth.py
 ```
 
 Telethon запросить SMS-код і (можливо) 2FA пароль. Після успіху з'явиться файл `uav_watcher.session`.
@@ -127,7 +127,7 @@ Telethon запросить SMS-код і (можливо) 2FA пароль. П�
 **Step 4: Перевірити що сесія створена**
 
 ```bash
-ls -la /home/vokov/projects/uav-watcher/*.session
+ls -la /home/vokov/projects/Sharon/*.session
 ```
 
 Expected: файл `uav_watcher.session` ненульового розміру.
@@ -137,7 +137,7 @@ Expected: файл `uav_watcher.session` ненульового розміру.
 ### Task 3: Написати основний watcher
 
 **Files:**
-- Create: `/home/vokov/projects/uav-watcher/uav_watcher.py`
+- Create: `/home/vokov/projects/Sharon/uav_watcher.py`
 
 **Step 1: Написати uav_watcher.py**
 
@@ -267,7 +267,7 @@ pip3 install httpx --quiet
 **Step 3: Commit**
 
 ```bash
-cd /home/vokov/projects/uav-watcher && git add uav_watcher.py auth.py && git commit -m "feat: add uav_watcher with telethon+goclaw AI pipeline"
+cd /home/vokov/projects/Sharon && git add uav_watcher.py auth.py && git commit -m "feat: add uav_watcher with telethon+goclaw AI pipeline"
 ```
 
 ---
@@ -277,7 +277,7 @@ cd /home/vokov/projects/uav-watcher && git add uav_watcher.py auth.py && git com
 **Step 1: Запустити watcher в терміналі**
 
 ```bash
-cd /home/vokov/projects/uav-watcher && python3 uav_watcher.py
+cd /home/vokov/projects/Sharon && python3 uav_watcher.py
 ```
 
 Expected: `UAV watcher started. Watching channels: [-1002187970584]`
@@ -285,7 +285,7 @@ Expected: `UAV watcher started. Watching channels: [-1002187970584]`
 **Step 2: Перевірити AI класифікацію окремо**
 
 ```bash
-cd /home/vokov/projects/uav-watcher && python3 - << 'EOF'
+cd /home/vokov/projects/Sharon && python3 - << 'EOF'
 import asyncio, json
 from uav_watcher import ai_classify, load_config
 cfg = load_config()
@@ -302,7 +302,7 @@ Expected: `threat=True, reason=...`
 **Step 3: Перевірити що відбій не тригерить**
 
 ```bash
-cd /home/vokov/projects/uav-watcher && python3 - << 'EOF'
+cd /home/vokov/projects/Sharon && python3 - << 'EOF'
 import asyncio
 from uav_watcher import ai_classify, load_config
 cfg = load_config()
@@ -321,12 +321,12 @@ Expected: `threat=False, reason=...`
 ### Task 5: Systemd сервіс (автозапуск)
 
 **Files:**
-- Create: `/etc/systemd/system/uav-watcher.service`
+- Create: `/etc/systemd/system/Sharon.service`
 
 **Step 1: Написати unit-файл**
 
 ```bash
-sudo tee /etc/systemd/system/uav-watcher.service << 'EOF'
+sudo tee /etc/systemd/system/Sharon.service << 'EOF'
 [Unit]
 Description=UAV Alert Watcher for Oleksandriia
 After=network-online.target
@@ -335,9 +335,9 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=vokov
-WorkingDirectory=/home/vokov/projects/uav-watcher
-EnvironmentFile=/home/vokov/projects/uav-watcher/.env
-ExecStart=/usr/bin/python3 /home/vokov/projects/uav-watcher/uav_watcher.py
+WorkingDirectory=/home/vokov/projects/Sharon
+EnvironmentFile=/home/vokov/projects/Sharon/.env
+ExecStart=/usr/bin/python3 /home/vokov/projects/Sharon/uav_watcher.py
 Restart=always
 RestartSec=30
 StandardOutput=journal
@@ -352,15 +352,15 @@ EOF
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable uav-watcher
-sudo systemctl start uav-watcher
+sudo systemctl enable Sharon
+sudo systemctl start Sharon
 ```
 
 **Step 3: Перевірити статус**
 
 ```bash
-sudo systemctl status uav-watcher
-sudo journalctl -u uav-watcher -f --no-pager -n 20
+sudo systemctl status Sharon
+sudo journalctl -u Sharon -f --no-pager -n 20
 ```
 
 Expected: `Active: active (running)` і лог `UAV watcher started.`
@@ -378,7 +378,7 @@ Expected: `Active: active (running)` і лог `UAV watcher started.`
 }
 ```
 
-Потім `sudo systemctl restart uav-watcher`.
+Потім `sudo systemctl restart Sharon`.
 
 ---
 

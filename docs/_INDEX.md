@@ -1,15 +1,15 @@
 ---
 tags:
-  - domain:uav-watcher
+  - domain:Sharon
   - status:canonical
   - format:index
 created: 2026-05-18
 updated: 2026-05-18
 tier: 1
-title: "UAV Watcher + Sharon — Документація"
+title: "Sharon — Документація"
 ---
 
-# UAV Watcher + Sharon — Індекс документації
+# Sharon — Індекс документації
 
 > AI-система гіперлокального моніторингу повітряних загроз і кризової підтримки.
 
@@ -28,7 +28,7 @@ title: "UAV Watcher + Sharon — Документація"
 ## Семантичні зв'язки
 
 **Цей індекс є частиною:**
-- Проект uav-watcher (корінь)
+- Проект Sharon (корінь)
 
 **Ключові концепції:**
 - [[README]] → архітектура та deploy

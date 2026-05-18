@@ -1,10 +1,10 @@
-# **Technical Architecture and Research Report: UAV Watcher v2.0**
+# **Technical Architecture and Research Report: Sharon v2.0**
 
 ## **Executive Summary**
 
-The escalating requirement for resilient, localized civilian safety infrastructure in conflict zones necessitates a paradigm shift in emergency notification systems. "UAV Watcher," an open-source safety system currently operational in the Kirovohrad Oblast, presents a foundational model utilizing Python-based Telegram automation and basic threat classification. However, scaling this system to a national-level, multi-platform architecture—while maintaining operational integrity under severely degraded network conditions—demands a sophisticated synthesis of alternative communication protocols, offline-first architectures, and psychologically calibrated crisis response interfaces.
+The escalating requirement for resilient, localized civilian safety infrastructure in conflict zones necessitates a paradigm shift in emergency notification systems. "Sharon," an open-source safety system currently operational in the Kirovohrad Oblast, presents a foundational model utilizing Python-based Telegram automation and basic threat classification. However, scaling this system to a national-level, multi-platform architecture—while maintaining operational integrity under severely degraded network conditions—demands a sophisticated synthesis of alternative communication protocols, offline-first architectures, and psychologically calibrated crisis response interfaces.
 
-This comprehensive research report evaluates the technical pathways for evolving UAV Watcher into its v2.0 iteration. The analysis systematically examines the implementation of programmable family safety groups, offline location tracking for disaster recovery, crisis communication phrasing, cross-platform technical constraints, and integration with existing open-source defense ecosystems. The resulting architectural framework proposes a decentralized, microservices-oriented topology that bridges the Telegram Bot API with LoRa-based mesh networks, ensuring high availability, localized data sovereignty, and intuitive user deployment for non-technical actors operating in high-stress combat environments.
+This comprehensive research report evaluates the technical pathways for evolving Sharon into its v2.0 iteration. The analysis systematically examines the implementation of programmable family safety groups, offline location tracking for disaster recovery, crisis communication phrasing, cross-platform technical constraints, and integration with existing open-source defense ecosystems. The resulting architectural framework proposes a decentralized, microservices-oriented topology that bridges the Telegram Bot API with LoRa-based mesh networks, ensuring high availability, localized data sovereignty, and intuitive user deployment for non-technical actors operating in high-stress combat environments.
 
 ## **1\. Family Safety Groups via Telegram**
 
@@ -65,14 +65,14 @@ However, continuous location polling and active RF transmission induce severe th
 
 ### **Comparative Analysis of Existing Offline Solutions**
 
-Understanding the operational limits of existing commercial applications dictates the necessity of a custom architecture for UAV Watcher.
+Understanding the operational limits of existing commercial applications dictates the necessity of a custom architecture for Sharon.
 
 | Application / Platform | Offline Utility | Network Reliance | Mechanism of Action | Suitability for Rubble Scenarios |
 | :---- | :---- | :---- | :---- | :---- |
 | **Zello** | None | High (Requires IP network) | Push-to-talk Voice over IP (VoIP). | Unsuitable. Fails entirely without cellular or Wi-Fi backhaul. |
 | **Life360** | Low | High (Requires GPS & Cell) | Continuous background polling. | Unsuitable. Drains battery rapidly; GPS fails under concrete. |
 | **Galileo Offline Maps** | Medium | Low (Only for initial map download) | Pre-cached vector tiles for navigation. | High for navigating to shelters; Zero capability for broadcasting SOS. |
-| **UAV Watcher v2.0** | High | Zero | Wi-Fi Probe RSSI, BLE, Acoustic Beacons. | Optimal. Designed specifically for localized, passive detection without IP routing. |
+| **Sharon v2.0** | High | Zero | Wi-Fi Probe RSSI, BLE, Acoustic Beacons. | Optimal. Designed specifically for localized, passive detection without IP routing. |
 
 ## **3\. Crisis Response Chatbot Templates and Psychological Architecture**
 
@@ -94,7 +94,7 @@ Automated responses should seamlessly transition into grounding techniques to di
 
 Integrating international humanitarian frameworks is vital. The World Health Organization (WHO) and the United Nations Office for the Coordination of Humanitarian Affairs (UN OCHA) emphasize community-based early warning networks that prioritize clarity of the threat vector. The International Federation of Red Cross and Red Crescent Societies (IFRC) shelter-in-place protocols dictate specific environmental modifications, such as utilizing duct tape and heavy plastic sheeting to seal doors and ventilation shafts against chemical dispersion.
 
-UAV Watcher must map its AI-classified threats to explicit, kinetic-specific evasion instructions:
+Sharon must map its AI-classified threats to explicit, kinetic-specific evasion instructions:
 
 * **Shahed / Kamikaze UAV:** Characterized by a distinct low-frequency acoustic signature and relatively slow loitering speeds. The alert must instruct users to adhere to the "two walls rule" (placing two load-bearing walls between themselves and the exterior) and avoid top-floor apartments due to the high-explosive payload characteristics designed for surface detonation.  
 * **Kalibr Cruise Missile:** Terrain-hugging flight paths designed for radar evasion. Warning times are highly variable. Instructions must mandate immediate descent to subterranean shelters, as standard residential load-bearing walls are insufficient against the kinetic mass and explosive yield.  
@@ -103,7 +103,7 @@ UAV Watcher must map its AI-classified threats to explicit, kinetic-specific eva
 
 ## **4\. Multi-Platform Architecture Constraints**
 
-Deploying UAV Watcher across Android, iOS, and Linux environments necessitates an architecture that balances cross-platform development efficiency with deep hardware access for survival features.
+Deploying Sharon across Android, iOS, and Linux environments necessitates an architecture that balances cross-platform development efficiency with deep hardware access for survival features.
 
 ### **React Native vs. Flutter vs. Progressive Web Apps (PWA)**
 
@@ -114,7 +114,7 @@ To achieve background location persistence and reliable push notifications that 
 * **React Native** utilizes a bridge architecture to invoke native original equipment manufacturer (OEM) widgets. This allows seamless integration with background location modules but can introduce latency during high-frequency sensor polling.  
 * **Flutter** compiles to native ARM code and utilizes its own Skia (or Impeller) rendering engine. It provides highly consistent user interfaces across platforms and superior performance for complex map rendering (vital for offline OpenStreetMap routing).
 
-Commercial safety applications such as Everbridge, AlertMedia, and Rave Mobile Safety bypass these limitations by operating as deeply integrated enterprise Software-as-a-Service (SaaS) platforms. They utilize multi-modal delivery systems, primarily relying on carrier-level Cell Broadcast technology, SMS gateways (like Twilio), and native application push notifications via Apple Push Notification service (APNs) and Firebase Cloud Messaging (FCM). Because UAV Watcher is a grassroots, open-source project without telecom carrier integration, it must mimic this multi-modal delivery by combining Telegram MTProto pushes, SMS fallback, and localized LoRa broadcasts.
+Commercial safety applications such as Everbridge, AlertMedia, and Rave Mobile Safety bypass these limitations by operating as deeply integrated enterprise Software-as-a-Service (SaaS) platforms. They utilize multi-modal delivery systems, primarily relying on carrier-level Cell Broadcast technology, SMS gateways (like Twilio), and native application push notifications via Apple Push Notification service (APNs) and Firebase Cloud Messaging (FCM). Because Sharon is a grassroots, open-source project without telecom carrier integration, it must mimic this multi-modal delivery by combining Telegram MTProto pushes, SMS fallback, and localized LoRa broadcasts.
 
 ### **Offline-First Architecture and OS Limitations**
 
@@ -124,35 +124,35 @@ If the primary API is unreachable, the sync adapter fails over to alternative tr
 
 ## **5\. Existing Open Source Ecosystem Integration**
 
-UAV Watcher v2.0 must not exist in a vacuum; it must integrate seamlessly with existing Ukrainian digital defense infrastructure and global open-source safety protocols to amplify its effectiveness and reduce duplicative engineering.
+Sharon v2.0 must not exist in a vacuum; it must integrate seamlessly with existing Ukrainian digital defense infrastructure and global open-source safety protocols to amplify its effectiveness and reduce duplicative engineering.
 
 ### **Alerts.in.ua API and Existing Ukrainian Applications**
 
-The alerts.in.ua service acts as the definitive aggregator for official Ukrainian air raid statuses. It provides a RESTful API returning JSON payloads detailing active threats across oblasts, raions, and individual hromadas.15 The API requires an authorization bearer token and exposes endpoints such as /v1/alerts/active.json, which details the location title, alert type (air raid, artillery shelling, urban fights, chemical), and highly precise initiation timestamps.15 Integrating this API allows UAV Watcher to cross-reference localized Telegram channel Open-Source Intelligence (OSINT) with official state warnings, utilizing Python's aiohttp or the dedicated alerts\_in\_ua asynchronous Python client.15
+The alerts.in.ua service acts as the definitive aggregator for official Ukrainian air raid statuses. It provides a RESTful API returning JSON payloads detailing active threats across oblasts, raions, and individual hromadas.15 The API requires an authorization bearer token and exposes endpoints such as /v1/alerts/active.json, which details the location title, alert type (air raid, artillery shelling, urban fights, chemical), and highly precise initiation timestamps.15 Integrating this API allows Sharon to cross-reference localized Telegram channel Open-Source Intelligence (OSINT) with official state warnings, utilizing Python's aiohttp or the dedicated alerts\_in\_ua asynchronous Python client.15
 
-Existing applications like "eTrivoga" and "Air Alert" (Повітряна тривога) handle mass broadcasting efficiently but lack the granular, family-level rollcall features proposed for UAV Watcher. By pulling from the same state APIs, UAV Watcher ensures consistency while adding localized survivability layers.
+Existing applications like "eTrivoga" and "Air Alert" (Повітряна тривога) handle mass broadcasting efficiently but lack the granular, family-level rollcall features proposed for Sharon. By pulling from the same state APIs, Sharon ensures consistency while adding localized survivability layers.
 
 ### **Infrastructure Automation and OpenStreetMap**
 
-Integrating physical security environments can autonomously protect civilians. Ajax Systems, a predominant security hardware provider in Eastern Europe, exposes integration capabilities that allow home automation servers to read sensor states and arm/disarm systems.17 However, architectural limitations exist: real-time event streaming (via Server-Sent Events or AWS SQS) is only active when the Ajax system is armed. When disarmed, the API relies on polling intervals (typically 5 seconds for doors and 30 seconds for motion sensors).18 Integrating UAV Watcher with an Ajax bridge allows the system to automatically lock electronic deadbolts, drop blast shutters, or activate secondary physical sirens when a localized threat is confirmed by the AI classifier.
+Integrating physical security environments can autonomously protect civilians. Ajax Systems, a predominant security hardware provider in Eastern Europe, exposes integration capabilities that allow home automation servers to read sensor states and arm/disarm systems.17 However, architectural limitations exist: real-time event streaming (via Server-Sent Events or AWS SQS) is only active when the Ajax system is armed. When disarmed, the API relies on polling intervals (typically 5 seconds for doors and 30 seconds for motion sensors).18 Integrating Sharon with an Ajax bridge allows the system to automatically lock electronic deadbolts, drop blast shutters, or activate secondary physical sirens when a localized threat is confirmed by the AI classifier.
 
-For offline navigation to safety, integrating OpenStreetMap (OSM) data is essential. Using the Overpass API, UAV Watcher can query for amenity=shelter or bunker\_type=hardened to download node data. This GeoJSON data is cached locally on the device, allowing the app to render routing vectors to the nearest bunker even when cellular infrastructure is destroyed.
+For offline navigation to safety, integrating OpenStreetMap (OSM) data is essential. Using the Overpass API, Sharon can query for amenity=shelter or bunker\_type=hardened to download node data. This GeoJSON data is cached locally on the device, allowing the app to render routing vectors to the nearest bunker even when cellular infrastructure is destroyed.
 
 ### **Decentralized Protocols: Matrix and Meshtastic**
 
-Relying entirely on Telegram introduces a single point of failure. The Matrix protocol (and its primary client, Element) offers a decentralized, federated alternative. Matrix utilizes the Olm and Megolm cryptographic ratchets to ensure end-to-end encryption. While user adoption is lower than Telegram, supporting Matrix webhooks ensures that if Telegram is geoblocked or its infrastructure fails, UAV Watcher can continue routing messages through self-hosted Matrix homeservers.
+Relying entirely on Telegram introduces a single point of failure. The Matrix protocol (and its primary client, Element) offers a decentralized, federated alternative. Matrix utilizes the Olm and Megolm cryptographic ratchets to ensure end-to-end encryption. While user adoption is lower than Telegram, supporting Matrix webhooks ensures that if Telegram is geoblocked or its infrastructure fails, Sharon can continue routing messages through self-hosted Matrix homeservers.
 
 For severe disaster zones experiencing total infrastructural blackout, Meshtastic provides off-grid, decentralized communication via affordable ESP32-based LoRa radios.19 The network operates without central routers, utilizing a flood-routing protocol where each node repeats the signal. The Meshtastic Python API enables a device to connect via serial port (/dev/ttyUSB0) or Transmission Control Protocol (TCP), allowing automated scripts to inject text messages into the mesh using the interface.sendText("payload") command.6
 
-Furthermore, integrating with the civilian variants of the Android Team Awareness Kit (ATAK) via Multicast User Datagram Protocol (UDP) and Cursor on Target (CoT) XML messages allows civilian defense coordinators to view UAV Watcher alerts and SOS beacons overlaid dynamically on tactical maps.
+Furthermore, integrating with the civilian variants of the Android Team Awareness Kit (ATAK) via Multicast User Datagram Protocol (UDP) and Cursor on Target (CoT) XML messages allows civilian defense coordinators to view Sharon alerts and SOS beacons overlaid dynamically on tactical maps.
 
 ## **6\. Technical Architecture Recommendation (v2.0)**
 
-To fulfill the stringent requirements of high availability, deep platform integration, and offline resilience in war zone conditions, the recommended architecture for UAV Watcher v2.0 follows a Hub-and-Spoke Microservices model.
+To fulfill the stringent requirements of high availability, deep platform integration, and offline resilience in war zone conditions, the recommended architecture for Sharon v2.0 follows a Hub-and-Spoke Microservices model.
 
 **1\. The Local Hub (Linux / Android Termux):**
 
-The core processing engine remains a localized Python daemon. Deploying via Termux allows non-technical users to install the system via a single bash script (pkg install python && pip install uav-watcher). This ensures that even if external cloud providers are severed, the local node continues to process logic. It runs an asynchronous asyncio event loop managing multiple input and output streams.
+The core processing engine remains a localized Python daemon. Deploying via Termux allows non-technical users to install the system via a single bash script (pkg install python && pip install Sharon). This ensures that even if external cloud providers are severed, the local node continues to process logic. It runs an asynchronous asyncio event loop managing multiple input and output streams.
 
 **2\. Input Aggregators (The Spokes):**
 
@@ -182,7 +182,7 @@ The deployment strategy must be iterative, ensuring core stability before introd
 
 ## **8\. Code Implementations for Key Features**
 
-The following code snippets demonstrate the technical foundation for the three most critical upgrades required for UAV Watcher v2.0, formatted with English comments to satisfy the project constraints.
+The following code snippets demonstrate the technical foundation for the three most critical upgrades required for Sharon v2.0, formatted with English comments to satisfy the project constraints.
 
 ### **A. Programmatic Telegram Group Management (Telethon MTProto)**
 
@@ -290,7 +290,7 @@ if \_\_name\_\_ \== '\_\_main\_\_':
 
 ### **C. Asynchronous Threat Polling (Alerts.in.ua API)**
 
-To maintain synchronized awareness with official state warnings without blocking the main execution thread of the UAV Watcher daemon, this script utilizes the alerts\_in\_ua asynchronous Python library.15
+To maintain synchronized awareness with official state warnings without blocking the main execution thread of the Sharon daemon, this script utilizes the alerts\_in\_ua asynchronous Python library.15
 
 Python
 
@@ -343,17 +343,17 @@ Deploying life-critical systems in highly contested cyber and physical environme
 
 ### **Adversarial Infrastructure Abuse and Malware**
 
-**Risk:** Threat actors actively target civilian trust in alert applications. Campaigns such as "Operation False Siren" involved the distribution of Android spyware mimicking official Israeli alert applications (Red Alert), sending impeccably translated malicious SMS messages to victims.22 Furthermore, Telegram bots are frequently co-opted as covert Command and Control (C2) channels by advanced persistent threats (APTs).23 **Mitigation:** The UAV Watcher Android APK must be cryptographically signed and distributed exclusively through verified repositories (F-Droid or GitHub Releases) with published SHA-256 hashes. The system must never evaluate executable code passed through Telegram inputs, neutralizing bot-based payload delivery.
+**Risk:** Threat actors actively target civilian trust in alert applications. Campaigns such as "Operation False Siren" involved the distribution of Android spyware mimicking official Israeli alert applications (Red Alert), sending impeccably translated malicious SMS messages to victims.22 Furthermore, Telegram bots are frequently co-opted as covert Command and Control (C2) channels by advanced persistent threats (APTs).23 **Mitigation:** The Sharon Android APK must be cryptographically signed and distributed exclusively through verified repositories (F-Droid or GitHub Releases) with published SHA-256 hashes. The system must never evaluate executable code passed through Telegram inputs, neutralizing bot-based payload delivery.
 
 ### **Proxy Server Compromise for Hardware Bridges**
 
-**Risk:** When integrating with third-party APIs (like Ajax Systems) without official enterprise keys, traffic often routes through community proxy servers. A compromised proxy can intercept the credentials hash, granting the proxy administrator full access to disarm physical security systems or spoof sensor data.18 **Mitigation:** The architecture must enforce end-to-end encryption. Where community proxies are required, UAV Watcher must utilize Direct Mode with official enterprise API keys whenever possible, strictly bypassing unverified intermediate nodes.18
+**Risk:** When integrating with third-party APIs (like Ajax Systems) without official enterprise keys, traffic often routes through community proxy servers. A compromised proxy can intercept the credentials hash, granting the proxy administrator full access to disarm physical security systems or spoof sensor data.18 **Mitigation:** The architecture must enforce end-to-end encryption. Where community proxies are required, Sharon must utilize Direct Mode with official enterprise API keys whenever possible, strictly bypassing unverified intermediate nodes.18
 
 ## **10\. Competitive Analysis**
 
-To contextualize UAV Watcher's position within the global emergency response ecosystem, it is compared against state-sponsored military architectures and commercial safety platforms.
+To contextualize Sharon's position within the global emergency response ecosystem, it is compared against state-sponsored military architectures and commercial safety platforms.
 
-| Feature / Platform | UAV Watcher v2.0 (Proposed) | Pikud HaOref (Israel HFC) | Everbridge (Commercial) | Life360 (Commercial) |
+| Feature / Platform | Sharon v2.0 (Proposed) | Pikud HaOref (Israel HFC) | Everbridge (Commercial) | Life360 (Commercial) |
 | :---- | :---- | :---- | :---- | :---- |
 | **Primary Delivery Vector** | Telegram Bot / P2P Mesh | Siren / Cell Broadcast / App | SMS / App Push / Email | Mobile App Push |
 | **Offline Capability** | High (Meshtastic LoRa) 6 | Low (Relies on Cell/Siren) | None | None |
@@ -363,7 +363,7 @@ To contextualize UAV Watcher's position within the global emergency response eco
 | **Architecture Topology** | Decentralized / Local Host | Centralized Microservices | Enterprise Cloud (SaaS) | Enterprise Cloud (SaaS) |
 | **Cost to Deploy** | Open Source / Hardware Cost | Billions (State Funded) | High Enterprise Licensing | Subscription Model |
 
-The analysis indicates that while UAV Watcher lacks the deep telecom carrier integration of state-level systems (such as direct Cell Broadcast capabilities that wake up sleeping devices), its proposed integration of offline RF mesh networking provides a superior resilience profile in environments where critical cellular infrastructure is actively targeted and destroyed.
+The analysis indicates that while Sharon lacks the deep telecom carrier integration of state-level systems (such as direct Cell Broadcast capabilities that wake up sleeping devices), its proposed integration of offline RF mesh networking provides a superior resilience profile in environments where critical cellular infrastructure is actively targeted and destroyed.
 
 ## **11\. Estimated Development Effort**
 
@@ -379,7 +379,7 @@ Executing the v2.0 roadmap requires a calculated allocation of developer resourc
 | **Wi-Fi Probe Scanner** | Develop Linux libpcap wrapper to capture 802.11 frames, build local RSSI clustering logic to bypass MAC randomization. | 80 | Critical |
 | **Total Estimated Effort** |  | **275 Hours** |  |
 
-The evolution of UAV Watcher from a localized Telegram scraper to a comprehensive civilian survival instrument relies entirely on removing single points of failure. Relying exclusively on cloud-based APIs is an untenable strategy in a theater where energy grids and fiber-optic backbones are primary targets. By decentralizing the communication layer through Meshtastic LoRa hardware, bridging official state APIs with automated physical security overrides, and implementing advanced passive detection mechanisms, UAV Watcher v2.0 can fundamentally alter the survivability matrix for civilians. Furthermore, formatting the delivery of this intelligence using psychologically validated crisis communication templates ensures that the technological superiority of the early warning translates directly into rapid, precise, and calm physical action. Utilizing the architectural pathways outlined in this report will yield a highly resilient, scalable, and entirely open-source safety infrastructure capable of operating independently of standard telecommunication arrays.
+The evolution of Sharon from a localized Telegram scraper to a comprehensive civilian survival instrument relies entirely on removing single points of failure. Relying exclusively on cloud-based APIs is an untenable strategy in a theater where energy grids and fiber-optic backbones are primary targets. By decentralizing the communication layer through Meshtastic LoRa hardware, bridging official state APIs with automated physical security overrides, and implementing advanced passive detection mechanisms, Sharon v2.0 can fundamentally alter the survivability matrix for civilians. Furthermore, formatting the delivery of this intelligence using psychologically validated crisis communication templates ensures that the technological superiority of the early warning translates directly into rapid, precise, and calm physical action. Utilizing the architectural pathways outlined in this report will yield a highly resilient, scalable, and entirely open-source safety infrastructure capable of operating independently of standard telecommunication arrays.
 
 #### **Джерела**
 

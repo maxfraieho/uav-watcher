@@ -1,4 +1,4 @@
-# UAV Watcher — Встановлення на смартфон (Termux)
+# Sharon — Встановлення на смартфон (Termux)
 
 Запустити моніторинг БПЛА-загроз прямо на Android-смартфоні — без сервера.
 
@@ -24,7 +24,7 @@
 Відкрити Termux і виконати одну команду:
 
 ```bash
-pkg install -y curl && curl -fsSL https://raw.githubusercontent.com/maxfraieho/uav-watcher/master/install.sh | bash
+pkg install -y curl && curl -fsSL https://raw.githubusercontent.com/maxfraieho/Sharon/master/install.sh | bash
 ```
 
 Інсталятор автоматично:
@@ -83,7 +83,7 @@ pkg install -y curl && curl -fsSL https://raw.githubusercontent.com/maxfraieho/u
 
 **Додати в config.json:**
 ```bash
-nano ~/uav-watcher/config.json
+nano ~/Sharon/config.json
 ```
 
 Знайти рядок `"channels": []` і замінити на:
@@ -98,17 +98,17 @@ nano ~/uav-watcher/config.json
 ## Крок 4 — Запустити
 
 ```bash
-cd ~/uav-watcher && bash start.sh
+cd ~/Sharon && bash start.sh
 ```
 
 Або якщо хочеш залишити в фоні і закрити Termux:
 ```bash
-cd ~/uav-watcher && nohup bash start.sh > uav.log 2>&1 &
+cd ~/Sharon && nohup bash start.sh > uav.log 2>&1 &
 ```
 
 Перевірити лог:
 ```bash
-tail -f ~/uav-watcher/uav.log
+tail -f ~/Sharon/uav.log
 ```
 
 ---
@@ -121,7 +121,7 @@ tail -f ~/uav-watcher/uav.log
 
 ```bash
 mkdir -p ~/.termux/boot
-cp ~/uav-watcher/start.sh ~/.termux/boot/uav-watcher.sh
+cp ~/Sharon/start.sh ~/.termux/boot/Sharon.sh
 ```
 
 Тепер при кожному перезавантаженні телефону сервіс запускатиметься автоматично.
@@ -143,7 +143,7 @@ cp ~/uav-watcher/start.sh ~/.termux/boot/uav-watcher.sh
 ## Оновлення
 
 ```bash
-cd ~/uav-watcher && git pull && pip install --upgrade telethon httpx python-dotenv
+cd ~/Sharon && git pull && pip install --upgrade telethon httpx python-dotenv
 ```
 
 ---
@@ -157,7 +157,7 @@ cd ~/uav-watcher && git pull && pip install --upgrade telethon httpx python-dote
 **Повідомлення не надходять** — перевір:
 1. Правильність ID каналів в `config.json`
 2. Чи є повідомлення з ключовими словами міста в каналі
-3. Логи: `tail -f ~/uav-watcher/uav.log`
+3. Логи: `tail -f ~/Sharon/uav.log`
 
 **AI не відповідає** — перевір endpoint та API ключ:
 ```bash

@@ -67,7 +67,7 @@ telegram "антидрон" OR "ПВО" Кіровоградщина
 
 3. Перезапустити сервіс:
 ```bash
-sudo rc-service uav-watcher restart
+sudo rc-service Sharon restart
 ```
 
 ---

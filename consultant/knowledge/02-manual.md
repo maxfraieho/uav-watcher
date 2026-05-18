@@ -1,4 +1,4 @@
-# UAV Watcher — Посібник користувача
+# Sharon — Посібник користувача
 
 > Система моніторингу повітряних тривог і сповіщення родини  
 > Версія: 2026-05-17
@@ -7,7 +7,7 @@
 
 ## Зміст
 
-1. [Що таке UAV Watcher](#1-що-таке-uav-watcher)
+1. [Що таке Sharon](#1-що-таке-Sharon)
 2. [Встановлення](#2-встановлення)
 3. [Перший запуск і налаштування](#3-перший-запуск-і-налаштування)
 4. [Веб-інтерфейс](#4-веб-інтерфейс)
@@ -21,9 +21,9 @@
 
 ---
 
-## 1. Що таке UAV Watcher
+## 1. Що таке Sharon
 
-**UAV Watcher** — це програма, яка моніторить Telegram-канали з повітряними тривогами і надсилає сповіщення вам і вашій родині.
+**Sharon** — це програма, яка моніторить Telegram-канали з повітряними тривогами і надсилає сповіщення вам і вашій родині.
 
 ### Можливості
 
@@ -55,20 +55,20 @@
 **Крок 2.** Скопіюйте та запустіть команду:
 
 ```bash
-curl -s https://raw.githubusercontent.com/maxfraieho/uav-watcher/master/install.sh | bash
+curl -s https://raw.githubusercontent.com/maxfraieho/Sharon/master/install.sh | bash
 ```
 
 **Крок 3.** Дочекайтеся завершення — займає 1–3 хвилини.
 
 Інсталятор:
 - встановить Python та необхідні бібліотеки
-- створить теку `~/uav-watcher/`
+- створить теку `~/Sharon/`
 - налаштує автозапуск (Termux, systemd або cron)
 
 ### Що встановлюється
 
 ```
-~/uav-watcher/
+~/Sharon/
 ├── uav_watcher.py    — головна програма
 ├── web_config.py     — веб-інтерфейс налаштувань
 ├── config.json       — налаштування (редагувати через браузер)
@@ -83,7 +83,7 @@ curl -s https://raw.githubusercontent.com/maxfraieho/uav-watcher/master/install.
 ### Запуск
 
 ```bash
-cd ~/uav-watcher
+cd ~/Sharon
 bash start.sh
 ```
 
@@ -245,7 +245,7 @@ https://вашпрефікс-alert.your-domain.example/share
 1. 🔊 Відтворить гучний SOS-сигнал (азбука Морзе: ⋅⋅⋅ ─ ─ ─ ⋅⋅⋅)
 2. 📍 Визначить ваші координати
 3. 📨 Надішле SOS-повідомлення у ваш Telegram з посиланням на карту
-4. 📡 Сповістить сусідні станції UAV Watcher (якщо налаштовані)
+4. 📡 Сповістить сусідні станції Sharon (якщо налаштовані)
 
 ### Як активувати
 
@@ -279,7 +279,7 @@ https://вашпрефікс-alert.your-domain.example/share
 
 ### Навіщо
 
-Якщо людина під завалом, а рятувальники не знають де вона — ніхто не може їй зателефонувати. **P2P мережа** дозволяє сусіднім станціям UAV Watcher автоматично отримати SOS-сигнал і повідомити своїх операторів.
+Якщо людина під завалом, а рятувальники не знають де вона — ніхто не може їй зателефонувати. **P2P мережа** дозволяє сусіднім станціям Sharon автоматично отримати SOS-сигнал і повідомити своїх операторів.
 
 ### Як це працює
 
@@ -297,7 +297,7 @@ https://вашпрефікс-alert.your-domain.example/share
 
 ### Налаштування
 
-**Крок 1.** Домовтесь із сусідами, у яких теж є UAV Watcher.
+**Крок 1.** Домовтесь із сусідами, у яких теж є Sharon.
 
 **Крок 2.** Обміняйтесь публічними посиланнями ваших тунелів (наприклад: `https://іванко-alert.your-domain.example`).
 
@@ -310,11 +310,11 @@ https://вашпрефікс-alert.your-domain.example/share
 ]
 ```
 
-> Файл `config.json` знаходиться у теці `~/uav-watcher/`. Відредагуйте будь-яким текстовим редактором.
+> Файл `config.json` знаходиться у теці `~/Sharon/`. Відредагуйте будь-яким текстовим редактором.
 
 **Крок 4.** Перезапустіть сервіс:
 ```bash
-cd ~/uav-watcher && bash start.sh
+cd ~/Sharon && bash start.sh
 ```
 
 ### Перевірка
@@ -330,7 +330,7 @@ Tunnel дозволяє родині у будь-якій точці світу 
 ### Вимоги
 
 - Встановлений `cloudflared` (інсталятор робить це автоматично)
-- Файли доступу у теці `~/uav-watcher/.cloudflared/` (додаються при встановленні)
+- Файли доступу у теці `~/Sharon/.cloudflared/` (додаються при встановленні)
 
 ### Налаштування Tunnel
 
@@ -375,39 +375,39 @@ https://rodyna-alert.your-domain.example/share
 Перевірити:
 ```bash
 ls ~/.termux/boot/
-# Має бути файл uav-watcher.sh
+# Має бути файл Sharon.sh
 ```
 
 Якщо файл відсутній:
 ```bash
 mkdir -p ~/.termux/boot
-cp ~/uav-watcher/start.sh ~/.termux/boot/uav-watcher.sh
-chmod +x ~/.termux/boot/uav-watcher.sh
+cp ~/Sharon/start.sh ~/.termux/boot/Sharon.sh
+chmod +x ~/.termux/boot/Sharon.sh
 ```
 
 ### Linux (systemd)
 
 Перевірити статус:
 ```bash
-systemctl --user status uav-watcher.service
+systemctl --user status Sharon.service
 systemctl --user status uav-web-config.service
 ```
 
 Запустити вручну:
 ```bash
-systemctl --user start uav-watcher.service
+systemctl --user start Sharon.service
 systemctl --user start uav-web-config.service
 ```
 
 Вимкнути автозапуск:
 ```bash
-systemctl --user disable uav-watcher.service
+systemctl --user disable Sharon.service
 ```
 
 ### Ручний запуск
 
 ```bash
-cd ~/uav-watcher
+cd ~/Sharon
 bash start.sh
 ```
 
@@ -430,7 +430,7 @@ bash start.sh
 
 1. Переконайтеся, що Termux:Boot встановлено з **F-Droid** (не Google Play)
 2. Відкрийте Termux:Boot і переконайтесь, що він активований у системних налаштуваннях (автозапуск застосунків)
-3. Запустіть вручну: `cd ~/uav-watcher && bash start.sh`
+3. Запустіть вручну: `cd ~/Sharon && bash start.sh`
 
 ---
 
@@ -442,14 +442,14 @@ pgrep -af web_config.py
 
 Якщо процес не знайдено:
 ```bash
-cd ~/uav-watcher && python3 web_config.py &
+cd ~/Sharon && python3 web_config.py &
 ```
 
 ---
 
 **❓ Tunnel не запускається**
 
-1. Переконайтеся, що файли у `~/.cloudflared/` або `~/uav-watcher/.cloudflared/` існують
+1. Переконайтеся, що файли у `~/.cloudflared/` або `~/Sharon/.cloudflared/` існують
 2. Перевірте інтернет-з'єднання
 3. Спробуйте інший префікс (поточний може вже використовуватися)
 
@@ -474,7 +474,7 @@ Safari на iOS потребує явного дозволу на DeviceMotion. 
 **❓ Як оновити програму**
 
 ```bash
-cd ~/uav-watcher
+cd ~/Sharon
 git pull origin master
 bash start.sh
 ```
@@ -492,7 +492,7 @@ bash start.sh
 
 ## Контакти та підтримка
 
-- **GitHub**: [maxfraieho/uav-watcher](https://github.com/maxfraieho/uav-watcher)
+- **GitHub**: [maxfraieho/Sharon](https://github.com/maxfraieho/Sharon)
 - **Telegram бот**: @OlBPLA_bot (для тестування)
 - **Рятувальники України**: 101
 - **Поліція**: 102

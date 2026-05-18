@@ -1,4 +1,4 @@
-# UAV Watcher — Project Context for Claude Code
+# Sharon — Project Context for Claude Code
 
 ## What this is
 Python Telegram monitoring bot + web config UI for civilian UAV/rocket alert tracking in Ukraine.
@@ -11,7 +11,7 @@ Python Telegram monitoring bot + web config UI for civilian UAV/rocket alert tra
 - **Web UI**: `http://localhost:8422` (local) or via Cloudflare tunnel
 
 ## Cloudflare Tunnel
-- Tunnel name: `uav-watcher-alerts`, ID: `c0413dca-1f1d-4176-be39-23e2c8f0754f`
+- Tunnel name: `Sharon-alerts`, ID: `c0413dca-1f1d-4176-be39-23e2c8f0754f`
 - Wildcard DNS: `*.your-domain.example` — users pick prefix → `{prefix}-alert.your-domain.example`
 - Credentials in `.cloudflared/` (gitignored: private keys)
 - Start via web UI → Tunnel card → enter prefix → Start
@@ -29,7 +29,7 @@ Python Telegram monitoring bot + web config UI for civilian UAV/rocket alert tra
 - `POST /api/shelter` — Overpass API shelter search by lat/lon (cached 1h)
 - `POST /api/shelter-chat` — AI chat via goclaw (shelter + safety advice)
 - `POST /api/sos` — trigger SOS: Telegram alert + relay to rescue_peers
-- `POST /api/sos-relay` — receive SOS from peer UAV Watcher instances
+- `POST /api/sos-relay` — receive SOS from peer Sharon instances
 
 ### /share page features
 1. Alert monitoring status
@@ -39,7 +39,7 @@ Python Telegram monitoring bot + web config UI for civilian UAV/rocket alert tra
 5. **Rescue signal mode** — ARM → DeviceMotion impact detection → 30s countdown → SOS overlay + Web Audio morse beep + Telegram alert
 
 ### P2P rescue network design
-- `rescue_peers` list in config.json — URLs of peer UAV Watcher instances
+- `rescue_peers` list in config.json — URLs of peer Sharon instances
 - When SOS fires → POST `/api/sos-relay` to all peers → each peer sends Telegram to its own notify_chat_id
 - No central server needed; bootstrap by sharing tunnel URLs
 
@@ -61,6 +61,6 @@ Python Telegram monitoring bot + web config UI for civilian UAV/rocket alert tra
 - [ ] Cloudflare Worker as optional central rescue registry (geo-based discovery without manual peering)
 
 ## git
-- Remote: `github.com:maxfraieho/uav-watcher.git`
+- Remote: `github.com:maxfraieho/Sharon.git`
 - `git add .` is FORBIDDEN — add files individually
 - `.cloudflared/` is gitignored (private tunnel credentials)

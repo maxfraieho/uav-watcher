@@ -341,7 +341,7 @@ async def main():
             for row in THREAT_KEYBOARD
         ]
         await event.respond(
-            "🛡 *UAV Watcher — Кризовий консультант*\n\nОберіть тип загрози:",
+            "🛡 *Sharon — Кризовий консультант*\n\nОберіть тип загрози:",
             buttons=buttons,
             parse_mode='md'
         )

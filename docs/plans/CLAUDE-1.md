@@ -1,4 +1,4 @@
-# UAV Watcher — Project Context for Claude Code
+# Sharon — Project Context for Claude Code
 
 > Civilian UAV/rocket alert monitoring system for Ukraine.
 > Monitors Telegram channels → AI classification → family notifications.
@@ -51,7 +51,7 @@ web_config.py (port 8422)
 - **Host:** `192.168.3.184` (Alpine Linux + OpenRC)
 - **SSH:** `sshpass -p '${ADMIN_PASS}' ssh -o StrictHostKeyChecking=no vokov@192.168.3.184`
 - **Web UI:** `http://localhost:8422` or via Cloudflare tunnel
-- **Watcher log:** `tail -f ~/uav-watcher/uav.log`
+- **Watcher log:** `tail -f ~/Sharon/uav.log`
 
 Passwords and tokens are in `.env` and `config.json` — NEVER hardcode them in source.
 
@@ -119,7 +119,7 @@ Passwords and tokens are in `.env` and `config.json` — NEVER hardcode them in 
    Replace with `async def _llm_call()` + `httpx.AsyncClient`.
 
 6. **`restart_service()` only handles OpenRC** — `install.sh` also supports systemd.
-   Add `systemctl --user restart uav-watcher` branch.
+   Add `systemctl --user restart Sharon` branch.
 
 7. **`CHAT_KB` in `web_config.py` duplicates `TEMPLATES` in `bot/crisis_templates.py`** — DRY violation.
    Import from `bot.crisis_templates` instead.
@@ -228,7 +228,7 @@ print(retrieval.retrieve('що робити при бпла', top_k=2))
 
 ```bash
 # Start both services
-cd ~/uav-watcher && bash start.sh
+cd ~/Sharon && bash start.sh
 
 # Or separately
 python3 web_config.py &
@@ -242,8 +242,8 @@ pgrep -fa uav_watcher
 pgrep -fa web_config
 
 # OpenRC service
-sudo rc-service uav-watcher restart
-sudo rc-service uav-watcher status
+sudo rc-service Sharon restart
+sudo rc-service Sharon status
 ```
 
 ---

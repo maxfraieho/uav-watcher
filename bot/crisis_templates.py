@@ -1,5 +1,5 @@
 """
-Crisis response templates for UAV Watcher chatbot.
+Crisis response templates for Sharon chatbot.
 All text is in Ukrainian. Sources: DSNS, WHO, IFRC, Israeli HFC model.
 """
 

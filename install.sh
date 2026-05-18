@@ -1,5 +1,5 @@
 #!/bin/bash
-# UAV Watcher — Termux installer
+# Sharon — Termux installer
 # Usage: curl -fsSL https://raw.githubusercontent.com/maxfraieho/uav-watcher/master/install.sh | bash
 
 set -e
@@ -21,7 +21,7 @@ INSTALL_DIR="$HOME/uav-watcher"
 
 echo ""
 echo -e "${BOLD}╔══════════════════════════════════════╗${NC}"
-echo -e "${BOLD}║       UAV Watcher — Termux Setup     ║${NC}"
+echo -e "${BOLD}║       Sharon — Termux Setup     ║${NC}"
 echo -e "${BOLD}╚══════════════════════════════════════╝${NC}"
 echo ""
 
@@ -39,7 +39,7 @@ else
 fi
 
 # ── 2. Клонування ────────────────────────────────────────────────────────────
-info "Завантаження UAV Watcher..."
+info "Завантаження Sharon..."
 if [ -d "$INSTALL_DIR" ]; then
     warn "Папка $INSTALL_DIR вже існує — оновлюємо"
     cd "$INSTALL_DIR" && git pull
@@ -178,7 +178,7 @@ warn "Після додавання каналів запусти: cd ~/uav-watc
 # ── 8. Скрипт запуску ────────────────────────────────────────────────────────
 cat > "$INSTALL_DIR/start.sh" <<'STARTSCRIPT'
 #!/bin/bash
-# UAV Watcher — запуск watcher + web config UI
+# Sharon — запуск watcher + web config UI
 cd "$(dirname "$0")"
 PYTHON=$(command -v python3 || command -v python)
 
@@ -191,7 +191,7 @@ fi
 WEB_PID=$!
 echo "[UAV] Web Config UI: http://localhost:8422 (PID $WEB_PID)"
 
-echo "[UAV] Запуск UAV Watcher..."
+echo "[UAV] Запуск Sharon..."
 "$PYTHON" uav_watcher.py
 
 kill $WEB_PID 2>/dev/null
@@ -221,7 +221,7 @@ setup_autostart() {
         PYTHON=$(command -v python3 || command -v python)
         cat > "$SDIR/uav-watcher.service" <<EOF
 [Unit]
-Description=UAV Watcher
+Description=Sharon
 After=network.target
 
 [Service]

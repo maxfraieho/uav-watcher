@@ -1,4 +1,4 @@
-# UAV Watcher — Session State 2026-05-17 (Session 3)
+# Sharon — Session State 2026-05-17 (Session 3)
 
 ## Що зроблено в цій сесії
 

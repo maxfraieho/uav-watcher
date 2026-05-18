@@ -49,7 +49,7 @@ async def lifespan(app: FastAPI):
         _observer.join()
 
 
-app = FastAPI(title="uav-watcher-consultant", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Sharon-consultant", version="0.1.0", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 

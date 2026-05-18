@@ -1,7 +1,7 @@
-# UAV Watcher v2.0 — Development Plan for Claude Code
+# Sharon v2.0 — Development Plan for Claude Code
 # =====================================================
 # READ THIS FIRST. This file is your primary directive.
-# Project path: /home/vokov/projects/uav-watcher
+# Project path: /home/vokov/projects/Sharon
 # Status: Active wartime civilian safety system — Ukraine
 # Goal: Evolve from single-alert-bot → full family safety platform
 
@@ -47,7 +47,7 @@ Create `bot/crisis_templates.py`:
 
 ```python
 """
-Crisis response templates for UAV Watcher chatbot.
+Crisis response templates for Sharon chatbot.
 All text is in Ukrainian. Sources: DSNS, WHO, IFRC, Israeli HFC model.
 """
 
@@ -194,7 +194,7 @@ async def cmd_help(event):
                [KeyboardButtonCallback(row[0]["text"], row[0]["callback_data"].encode())]
                for row in THREAT_KEYBOARD]
     await event.respond(
-        "🛡 *UAV Watcher — Кризовий консультант*\n\nОберіть тип загрози:",
+        "🛡 *Sharon — Кризовий консультант*\n\nОберіть тип загрози:",
         buttons=buttons,
         parse_mode='md'
     )
@@ -219,7 +219,7 @@ async def cmd_grounding(event):
 
 **Test after Task 0.1:**
 ```bash
-cd /home/vokov/projects/uav-watcher
+cd /home/vokov/projects/Sharon
 python3 -c "from bot.crisis_templates import TEMPLATES; print('OK:', list(TEMPLATES.keys()))"
 ```
 
@@ -796,7 +796,7 @@ Create `web/pwa/index.html` with minimal shell and TODO comments.
 
 After all Phase 0 tasks:
 ```bash
-cd /home/vokov/projects/uav-watcher
+cd /home/vokov/projects/Sharon
 python3 uav_watcher.py
 ```
 
@@ -837,7 +837,7 @@ If blocked:
 ## PROJECT STRUCTURE AFTER ALL PHASES
 
 ```
-uav-watcher/
+Sharon/
 ├── CLAUDE.md                    ← THIS FILE
 ├── uav_watcher.py               ← Main daemon (modified)
 ├── auth.py                      ← Telethon auth (unchanged)

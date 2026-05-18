@@ -1,4 +1,4 @@
-# UAV Watcher v2.0 — Plan Index
+# Sharon v2.0 — Plan Index
 
 **Full plan:** 
 **Started:** 2026-05-17
