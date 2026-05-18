@@ -125,102 +125,61 @@ def _save_cache(data: dict):
     CACHE_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def _geocode_street(street: str, user_lat: float, user_lon: float) -> tuple:
-    """Forward geocode a street address near user coordinates. Returns (lat, lon) or None."""
-    buf = 0.12  # ~13km bounding box
-    viewbox = f"{user_lon - buf},{user_lat + buf},{user_lon + buf},{user_lat - buf}"
-    params = urllib.parse.urlencode({
-        "q": street,
-        "format": "json",
-        "limit": 1,
-        "viewbox": viewbox,
-        "bounded": 1,
-        "accept-language": "uk",
-    })
-    url = f"https://nominatim.openstreetmap.org/search?{params}"
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": "UAVWatcher/1.0"})
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            results = json.loads(resp.read())
-        if results:
-            return float(results[0]["lat"]), float(results[0]["lon"])
-    except Exception as e:
-        log.debug(f"Geocode failed for '{street}': {e}")
-    return None
-
-
-def _parse_ebot_response(text: str, user_lat: float, user_lon: float) -> list:
+def _parse_ebot_messages(messages: list) -> list:
     """
-    Parse @UkraineShelterStfalconBot response into shelter dicts.
-    Tries GPS coords first; falls back to geocoding backtick-quoted addresses.
+    Parse sequence of messages from @UkraineShelterStfalconBot.
+    Bot sends pairs: text message (address) → geo message (GPS).
+    We use MessageMediaGeo for precise coordinates, text for address label.
     """
+    from telethon.tl.types import MessageMediaGeo, MessageMediaVenue
+
+    msgs = sorted([m for m in messages if not m.out], key=lambda m: m.id)
     shelters = []
-    coord_pats = [
-        re.compile(r'[?&]q=(-?\d+\.\d+)[,\s]+(-?\d+\.\d+)'),
-        re.compile(r'/maps/@(-?\d+\.\d+)[,\s]+(-?\d+\.\d+)'),
-        re.compile(r'geo:(-?\d+\.\d+)[,\s]+(-?\d+\.\d+)'),
-        re.compile(r'(?<!\d)(\d{2}\.\d{4,})[,\s]+(\d{2}\.\d{4,})(?!\d)'),
-    ]
-    blocks = re.split(r'\n(?=\d+[.)]\s)', text)
-    if len(blocks) <= 1:
-        blocks = re.split(r'\n\n+', text)
-    if len(blocks) <= 1:
-        blocks = [text]
+    pending_addr = ""
+    pending_hint = ""
 
-    for i, block in enumerate(blocks):
-        # 1. Try GPS coords
-        for pat in coord_pats:
-            m = pat.search(block)
-            if not m:
-                continue
-            try:
-                slat, slon = float(m.group(1)), float(m.group(2))
-                if not (44 < slat < 53 and 22 < slon < 40):
-                    continue
-                am = re.search(
-                    r'((?:вул\.?|пр\.?|пров\.?|бул\.?|просп\.?)\s+[\w\s\-,\.]+\d*)',
-                    block, re.UNICODE
-                )
-                addr = am.group(1).strip() if am else ""
-                nm = re.search(r'\d+[.)]\s*(.+?)(?:\n|$)', block)
-                name = nm.group(1).strip()[:60] if nm else f"Укриття {i + 1}"
-                shelters.append({
-                    "lat": slat, "lon": slon,
-                    "name": name, "address": addr,
-                    "type": "shelter", "source": "ebot",
-                })
-                break
-            except ValueError:
-                continue
-        else:
-            # 2. No GPS — try backtick-quoted address: `вул. Перспективна, 14`
-            backtick_addr = re.findall(r'`([^`]+)`', block)
-            for addr_candidate in backtick_addr:
-                if re.search(r'(?:вул|пр\.|просп|пров|бул|площа|набер)', addr_candidate, re.I):
-                    coords = _geocode_street(addr_candidate, user_lat, user_lon)
-                    if coords:
-                        slat, slon = coords
-                        # Extract shelter type hint from parentheses
-                        hint_m = re.search(r'\(([^)]+)\)', block)
-                        hint = hint_m.group(1) if hint_m else ""
-                        name = f"Укриття ({hint})" if hint else "Укриття"
-                        shelters.append({
-                            "lat": slat, "lon": slon,
-                            "name": name, "address": addr_candidate,
-                            "type": "shelter", "source": "ebot",
-                        })
-                        log.info(f"Geocoded ebot address '{addr_candidate}' → {slat},{slon}")
-                        break
+    for msg in msgs:
+        if msg.text:
+            t = msg.text
+            # Extract backtick-quoted address
+            bt = re.findall(r'`([^`]+)`', t)
+            addr_candidate = next(
+                (a for a in bt if re.search(r'(?:вул|пр\.|просп|пров|бул|площа|набер|проспект)', a, re.I)),
+                ""
+            )
+            if addr_candidate:
+                pending_addr = addr_candidate
+                hm = re.search(r'\(([^)]+будинок[^)]*|[^)]+поверх[^)]*|[^)]+цокол[^)]*)\)', t, re.I)
+                pending_hint = hm.group(1) if hm else ""
 
-    if not shelters:
-        log.debug(f"ebot: could not extract shelters from: {text[:200]}")
+        elif msg.media and isinstance(msg.media, (MessageMediaGeo, MessageMediaVenue)):
+            geo = msg.media.geo
+            if not (44 < geo.lat < 53 and 22 < geo.long < 40):
+                pending_addr = ""
+                pending_hint = ""
+                continue
+            if isinstance(msg.media, MessageMediaVenue):
+                name = msg.media.title or "Укриття"
+                addr = msg.media.address or pending_addr
+            else:
+                name = f"Укриття ({pending_hint})" if pending_hint else "Укриття"
+                addr = pending_addr
+            shelters.append({
+                "lat": geo.lat, "lon": geo.long,
+                "name": name, "address": addr,
+                "type": "shelter", "source": "ebot",
+            })
+            pending_addr = ""
+            pending_hint = ""
+
     return shelters
 
 
 async def fetch_from_ebot(user_client, lat: float, lon: float, timeout: int = 60) -> list:
     """
-    Send GPS location to @UkraineShelterStfalconBot via userbot and parse shelter response.
-    Sends /start first if no prior conversation history.
+    Send GPS location to @UkraineShelterStfalconBot via userbot.
+    Bot responds with (text + MessageMediaGeo) pairs — one per shelter.
+    Collects the full batch, then parses text+geo pairs for precise GPS.
     Returns [] on timeout, error, or parse failure.
     """
     if user_client is None:
@@ -249,12 +208,10 @@ async def fetch_from_ebot(user_client, lat: float, lon: float, timeout: int = 60
         history = await user_client.get_messages(peer, limit=3)
         last_id = history[0].id if history else 0
 
-        # Send /start if no history or last outgoing message was a location (re-init)
         if not history:
             await user_client.send_message(peer, "/start")
             log.info("Sent /start to shelter bot (first contact)")
             await asyncio.sleep(2)
-            # Record last_id again after /start response
             history = await user_client.get_messages(peer, limit=1)
             last_id = history[0].id if history else 0
 
@@ -266,18 +223,32 @@ async def fetch_from_ebot(user_client, lat: float, lon: float, timeout: int = 60
         ))
         log.info(f"Sent location to shelter bot: {lat}, {lon}")
 
+        # Collect ALL response messages: bot sends text+geo pairs for each shelter.
+        # Wait up to `timeout` for first response, then 6s more to capture the full batch.
+        first_seen_at = None
         deadline = time.time() + timeout
-        while time.time() < deadline:
-            await asyncio.sleep(3)
-            new_msgs = await user_client.get_messages(peer, limit=10, min_id=last_id)
-            for msg in reversed(new_msgs):
-                if not msg.out and msg.text:
-                    shelters = _parse_ebot_response(msg.text, lat, lon)
-                    log.info(f"ebot response received ({len(shelters)} shelters): {msg.text[:100]}")
-                    return shelters
+        collected: list = []
 
-        log.warning(f"fetch_from_ebot: no response within {timeout}s")
-        return []
+        while time.time() < deadline:
+            await asyncio.sleep(2)
+            new_msgs = await user_client.get_messages(peer, limit=15, min_id=last_id)
+            bot_msgs = [m for m in new_msgs if not m.out]
+            if bot_msgs:
+                collected = bot_msgs
+                if first_seen_at is None:
+                    first_seen_at = time.time()
+                    log.info(f"First ebot response at id={min(m.id for m in bot_msgs)}")
+                # Wait up to 6s after first response to collect all pairs
+                if time.time() - first_seen_at >= 6:
+                    break
+
+        if not collected:
+            log.warning(f"fetch_from_ebot: no response within {timeout}s")
+            return []
+
+        shelters = _parse_ebot_messages(collected)
+        log.info(f"ebot: parsed {len(shelters)} shelters from {len(collected)} messages")
+        return shelters
     except Exception as e:
         log.warning(f"fetch_from_ebot error: {e}")
         return []
@@ -334,7 +305,7 @@ def _enrich_and_sort(shelters: list, lat: float, lon: float, top_n: int) -> list
         s["distance_m"] = _haversine(lat, lon, s["lat"], s["lon"])
         s["maps_link"] = f"https://maps.google.com/?q={s['lat']},{s['lon']}"
     shelters.sort(key=lambda x: x["distance_m"])
-    shelters = _dedup_by_proximity(shelters)
+    shelters = _dedup_by_proximity(shelters, min_dist_m=30)
     return shelters[:top_n]
 
 
