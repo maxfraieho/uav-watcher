@@ -389,6 +389,52 @@ async def main():
 
     asyncio.create_task(_periodic_shelter_update())
 
+
+    # --- STARTUP CATCHUP: fetch last 4h from channels to fill crash gaps ---
+    async def _catchup_history():
+        """On startup, process recent channel history missed during downtime."""
+        import time as _time
+        from db.models import save_threat_event as _save
+        cutoff_ts = _time.time() - 4 * 3600  # 4 hours ago
+        log.info("[catchup] Scanning last 4h of channel history...")
+        total = 0
+        for ch_id in channels:
+            try:
+                async for msg in client.iter_messages(ch_id, limit=200):
+                    if not msg.text:
+                        continue
+                    if msg.date.timestamp() < cutoff_ts:
+                        break
+                    if not region_pattern_search(msg.text):
+                        continue
+                    try:
+                        chat = await client.get_entity(ch_id)
+                        ch_name = getattr(chat, "title", str(ch_id))
+                    except Exception:
+                        ch_name = str(ch_id)
+                    is_allclear = bool(_ALLCLEAR_PATTERNS.search(msg.text))
+                    is_threat_kw = any(k in msg.text.lower() for k in (
+                        "повітряна тривога", "воздушна тревога", "тривога", "загроза",
+                        "бпла", "ракет", "вибух", "обстріл",
+                    ))
+                    msg_ts = msg.date.strftime("%Y-%m-%d %H:%M:%S")
+                    _save(
+                        channel_id=ch_id,
+                        channel_name=ch_name,
+                        text=msg.text,
+                        threat_type="allclear" if is_allclear else ("uav" if is_threat_kw else "info"),
+                        proximity_score=5,
+                        location_terms=[],
+                        is_allclear=is_allclear,
+                        detected_at=msg_ts,
+                    )
+                    total += 1
+            except Exception as _ce:
+                log.warning(f"[catchup] channel {ch_id}: {_ce}")
+        log.info(f"[catchup] Done. Inserted {total} missed events.")
+
+    asyncio.create_task(_catchup_history())
+
     log.info(f"UAV watcher started. Watching {len(channels)} channel(s). Press Ctrl+C to stop.")
 
     # --- OFFICIAL API POLLER (Task 0.3) ---

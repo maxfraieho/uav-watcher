@@ -1,13 +1,23 @@
 """
-Local SQLite database for family groups and rollcall state.
+Local SQLite database for family groups, rollcall state, and threat events.
 Zero external dependencies — all data stored locally for OPSEC.
 """
 import sqlite3
 import os
 import secrets
-from datetime import datetime
+from datetime import datetime, timezone
 
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'families.db')
+
+
+def _migrate_db(conn):
+    c = conn.cursor()
+    existing = {r[1] for r in c.execute("PRAGMA table_info(family_members)")}
+    if "last_seen" not in existing:
+        c.execute("ALTER TABLE family_members ADD COLUMN last_seen TIMESTAMP")
+    if "ok_note" not in existing:
+        c.execute("ALTER TABLE family_members ADD COLUMN ok_note TEXT")
+    conn.commit()
 
 
 def init_db():
@@ -52,7 +62,30 @@ def init_db():
         location_encrypted TEXT
     )''')
 
+    c.execute('''CREATE TABLE IF NOT EXISTS threat_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        channel_id INTEGER,
+        channel_name TEXT,
+        message_text TEXT,
+        threat_type TEXT,
+        proximity_score INTEGER DEFAULT 1,
+        location_terms TEXT,
+        is_allclear INTEGER DEFAULT 0,
+        detected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS location_checkins (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        lat REAL,
+        lon REAL,
+        accuracy REAL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id)
+    )''')
+
     conn.commit()
+    _migrate_db(conn)
     conn.close()
     return DB_PATH
 
@@ -101,8 +134,16 @@ def join_family(invite_code: str, user_id: int, username: str = None, display_na
 def get_family_members(family_id: int) -> list:
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute("SELECT user_id, username, display_name FROM family_members WHERE family_id=?", (family_id,))
-    members = [{"user_id": r[0], "username": r[1], "display_name": r[2]} for r in c.fetchall()]
+    c.execute(
+        "SELECT user_id, username, display_name, last_seen, ok_note FROM family_members WHERE family_id=?",
+        (family_id,)
+    )
+    members = [
+        {"user_id": r[0], "username": r[1], "display_name": r[2],
+         "name": r[2] or r[1] or str(r[0]),
+         "last_seen": r[3], "ok_note": r[4]}
+        for r in c.fetchall()
+    ]
     conn.close()
     return members
 
@@ -116,6 +157,23 @@ def get_user_families(user_id: int) -> list:
     families = [{"id": r[0], "name": r[1], "invite_code": r[2]} for r in c.fetchall()]
     conn.close()
     return families
+
+
+def update_last_seen(user_id: int, ok_note: str = None):
+    conn = sqlite3.connect(DB_PATH)
+    now = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+    if ok_note is not None:
+        conn.execute(
+            "UPDATE family_members SET last_seen=?, ok_note=? WHERE user_id=?",
+            (now, ok_note, user_id)
+        )
+    else:
+        conn.execute(
+            "UPDATE family_members SET last_seen=? WHERE user_id=?",
+            (now, user_id)
+        )
+    conn.commit()
+    conn.close()
 
 
 def start_rollcall(family_id: int, threat_type: str) -> int:
@@ -171,4 +229,64 @@ def get_rollcall_status(rollcall_id: int) -> dict:
         "sos": counts.get("sos", 0),
         "no_response": counts.get("no_response", 0),
         "details": details
+    }
+
+
+def save_threat_event(channel_id: int, channel_name: str, text: str,
+                      threat_type: str, proximity_score: int,
+                      location_terms: list, is_allclear: bool = False,
+                      detected_at: str | None = None):
+    conn = sqlite3.connect(DB_PATH)
+    now = detected_at or datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+    conn.execute(
+        """INSERT INTO threat_events
+           (channel_id, channel_name, message_text, threat_type,
+            proximity_score, location_terms, is_allclear, detected_at)
+           VALUES (?,?,?,?,?,?,?,?)""",
+        (channel_id, channel_name, text[:500], threat_type,
+         proximity_score, ",".join(location_terms), 1 if is_allclear else 0, now)
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_recent_threats(hours: int = 6) -> list:
+    from datetime import timedelta
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).strftime('%Y-%m-%d %H:%M:%S')
+    conn = sqlite3.connect(DB_PATH)
+    rows = conn.execute(
+        """SELECT channel_name, message_text, threat_type, proximity_score,
+                  location_terms, is_allclear, detected_at
+           FROM threat_events WHERE detected_at >= ? ORDER BY detected_at DESC LIMIT 50""",
+        (cutoff,)
+    ).fetchall()
+    conn.close()
+    return [
+        {"channel_name": r[0], "message_text": r[1], "threat_type": r[2],
+         "proximity_score": r[3], "location_terms": r[4],
+         "is_allclear": bool(r[5]), "detected_at": r[6]}
+        for r in rows
+    ]
+
+
+def get_threat_stats(hours: int = 24) -> dict:
+    from datetime import timedelta
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).strftime('%Y-%m-%d %H:%M:%S')
+    conn = sqlite3.connect(DB_PATH)
+    row = conn.execute(
+        """SELECT COUNT(*), SUM(is_allclear),
+                  AVG(CASE WHEN is_allclear=0 THEN proximity_score END),
+                  MAX(CASE WHEN is_allclear=0 THEN proximity_score END)
+           FROM threat_events WHERE detected_at >= ?""",
+        (cutoff,)
+    ).fetchone()
+    conn.close()
+    total = row[0] or 0
+    allclears = row[1] or 0
+    return {
+        "total": total,
+        "allclears": int(allclears),
+        "threats": total - int(allclears),
+        "avg_proximity": round(row[2] or 0, 1),
+        "max_proximity": row[3] or 0,
     }

@@ -254,14 +254,22 @@ def _read_recent_events(hours: int = 6) -> str:
         evs = get_recent_threats(hours=hours)
         if not evs:
             return ""
+        # Chronological order (oldest→newest) so LLM reads timeline correctly
+        recent = list(reversed(evs[:12]))
         lines = []
-        for ev in evs[:12]:
+        for ev in recent:
             ts = str(ev.get("detected_at", ""))[:16].replace("T", " ")
             ttype = ev.get("threat_type", "")
             ch = ev.get("channel_name", "")
             snippet = (ev.get("message_text", "") or "")[:120]
             label = "ВІДБІЙ" if ev.get("is_allclear") else ttype.upper()
             lines.append(f"[{ts}] {label} ({ch}): {snippet}")
+        last = recent[-1]
+        if last.get("is_allclear"):
+            cur = "ВІДБІЙ — активної тривоги немає"
+        else:
+            cur = f"ТРИВОГА АКТИВНА ({last.get('threat_type','').upper()})"
+        lines.append(f"\n>> Поточний стан: {cur}")
         return "\n".join(lines)
     except Exception:
         return ""
