@@ -22,6 +22,7 @@ _last_notify_level: int = 0
 _NOTIFY_COOLDOWN_SEC = 90  # seconds between same-or-lower-level alerts
 _last_allclear_time: float = 0.0
 _ALLCLEAR_COOLDOWN_SEC = 300  # 5 min between all-clear notifications
+_active_threat: bool = False  # True only after a threat was actually sent to user
 
 def _infer_level(text: str, reason: str) -> int:
     """Infer threat level 1-3 from text/reason keywords."""
@@ -182,7 +183,7 @@ async def ai_classify(text: str, cfg: dict) -> tuple[bool, str]:
 
 async def send_notification(text: str, reason: str, cfg: dict, channel_name: str = ""):
     """Send alert via Telegram Bot API (with dedup cooldown)."""
-    global _last_notify_time, _last_notify_level
+    global _last_notify_time, _last_notify_level, _active_threat
     import time
     now = time.monotonic()
     elapsed = now - _last_notify_time
@@ -223,6 +224,7 @@ async def send_notification(text: str, reason: str, cfg: dict, channel_name: str
                 },
             )
             resp.raise_for_status()
+            _active_threat = True
             log.info(f"Notification sent L{level}: {reason}")
     except Exception as e:
         log.error(f"Send notification error: {e}")
@@ -230,7 +232,10 @@ async def send_notification(text: str, reason: str, cfg: dict, channel_name: str
 
 async def send_allclear_notification(cfg: dict):
     """Send all-clear with 5-min dedup; resets threat level so next threat notifies immediately."""
-    global _last_notify_time, _last_notify_level, _last_allclear_time
+    global _last_notify_time, _last_notify_level, _last_allclear_time, _active_threat
+    if not _active_threat:
+        log.info("[allclear] no active threat tracked, skipping all-clear")
+        return
     import time as _t
     now = _t.monotonic()
     if now - _last_allclear_time < _ALLCLEAR_COOLDOWN_SEC:
@@ -248,6 +253,7 @@ async def send_allclear_notification(cfg: dict):
                 json={"chat_id": cfg["notify_chat_id"], "text": msg, "parse_mode": "Markdown"},
             )
             resp.raise_for_status()
+            _active_threat = False
             log.info("All-clear notification sent")
     except Exception as e:
         log.error(f"Send all-clear error: {e}")
