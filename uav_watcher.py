@@ -20,6 +20,8 @@ load_dotenv()
 _last_notify_time: float = 0.0
 _last_notify_level: int = 0
 _NOTIFY_COOLDOWN_SEC = 90  # seconds between same-or-lower-level alerts
+_last_allclear_time: float = 0.0
+_ALLCLEAR_COOLDOWN_SEC = 300  # 5 min between all-clear notifications
 
 def _infer_level(text: str, reason: str) -> int:
     """Infer threat level 1-3 from text/reason keywords."""
@@ -155,13 +157,13 @@ async def ai_classify(text: str, cfg: dict) -> tuple[bool, str]:
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
             resp = await client.post(
-                cfg["goclaw_url"],
+                cfg.get("llm_proxy_url") or cfg.get("goclaw_url", ""),
                 headers={
-                    "Authorization": f"Bearer {cfg['goclaw_api_key']}",
+                    "Authorization": f"Bearer {cfg.get('llm_proxy_token') or cfg.get('goclaw_api_key', '')}",
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": cfg["goclaw_model"],
+                    "model": cfg.get("llm_proxy_model") or cfg.get("goclaw_model", ""),
                     "messages": [{"role": "user", "content": prompt}],
                     "max_tokens": 120,
                     "temperature": 0,
@@ -178,7 +180,7 @@ async def ai_classify(text: str, cfg: dict) -> tuple[bool, str]:
         return False, ""
 
 
-async def send_notification(text: str, reason: str, cfg: dict):
+async def send_notification(text: str, reason: str, cfg: dict, channel_name: str = ""):
     """Send alert via Telegram Bot API (with dedup cooldown)."""
     global _last_notify_time, _last_notify_level
     import time
@@ -193,13 +195,23 @@ async def send_notification(text: str, reason: str, cfg: dict):
     _last_notify_time = now
     _last_notify_level = level
     city = cfg.get("city", "ВашеМісто").upper()
-    # Escape special markdown chars in original text
     safe_text = text.replace("_", "\\_").replace("*", "\\*").replace("[", "\\[").replace("`", "\\`")
-    msg = (
-        f"\U0001f6a8 *ЗАГРОЗА БПЛА — {city}*\n\n"
-        f"{safe_text}\n\n"
-        f"_AI: {reason}_"
-    )
+    # Level-based formatting
+    if level >= 3:
+        header = f"🔴 *КРИТИЧНО — {city}*"
+        action = "\n\n⚠️ _Негайно в укриття!_"
+    elif level == 2:
+        header = f"🚨 *ЗАГРОЗА — {city}*"
+        action = ""
+    else:
+        header = f"⚠️ *МОНІТОРИНГ — {city}*"
+        action = ""
+    # Channel citation for level 2+
+    if level >= 2 and channel_name:
+        cite = f"\n📡 _{channel_name}:_\n{safe_text}"
+    else:
+        cite = f"\n{safe_text}"
+    msg = f"{header}{cite}\n\n_Аналіз: {reason}_{action}"
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.post(
@@ -211,9 +223,34 @@ async def send_notification(text: str, reason: str, cfg: dict):
                 },
             )
             resp.raise_for_status()
-            log.info(f"Notification sent: {reason}")
+            log.info(f"Notification sent L{level}: {reason}")
     except Exception as e:
         log.error(f"Send notification error: {e}")
+
+
+async def send_allclear_notification(cfg: dict):
+    """Send all-clear with 5-min dedup; resets threat level so next threat notifies immediately."""
+    global _last_notify_time, _last_notify_level, _last_allclear_time
+    import time as _t
+    now = _t.monotonic()
+    if now - _last_allclear_time < _ALLCLEAR_COOLDOWN_SEC:
+        log.info(f"[dedup] all-clear suppressed, elapsed={now - _last_allclear_time:.0f}s")
+        return
+    _last_allclear_time = now
+    _last_notify_level = 0      # reset so next threat notifies at any level
+    _last_notify_time = 0.0     # reset threat cooldown too
+    city = cfg.get("city", "ВашеМісто").upper()
+    msg = f"✅ *ВІДБІЙ — {city}*\n\nТривогу знято."
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                f"https://api.telegram.org/bot{cfg['bot_token']}/sendMessage",
+                json={"chat_id": cfg["notify_chat_id"], "text": msg, "parse_mode": "Markdown"},
+            )
+            resp.raise_for_status()
+            log.info("All-clear notification sent")
+    except Exception as e:
+        log.error(f"Send all-clear error: {e}")
 
 
 async def main():
@@ -230,7 +267,7 @@ async def main():
 
     log.info(f"City: {city} | Keywords: {keywords}")
     log.info(f"Channels: {channels}")
-    log.info(f"AI model: {cfg['goclaw_model']} via {cfg['goclaw_url']}")
+    log.info(f"AI model: {cfg.get('llm_proxy_model') or cfg.get('goclaw_model','?')} via {cfg.get('llm_proxy_url') or cfg.get('goclaw_url','?')}")
 
     client = TelegramClient(
         os.path.join(os.path.dirname(__file__), "uav_watcher"),
@@ -300,19 +337,25 @@ async def main():
         # Classify all_clear
         is_allclear = (not is_threat) and bool(_ALLCLEAR_PATTERNS.search(text))
         # Persist to threat_events for statistics and consultant context
-        from db.models import save_threat_event
-        save_threat_event(
-            channel_id=event.chat_id,
-            channel_name=ch_name,
-            text=text,
-            threat_type="uav" if is_threat else ("allclear" if is_allclear else "info"),
-            proximity_score=prox_score,
-            location_terms=prox_terms,
-            is_allclear=is_allclear,
-        )
+        try:
+            from db.models import save_threat_event
+            save_threat_event(
+                channel_id=event.chat_id,
+                channel_name=ch_name,
+                text=text,
+                threat_type="uav" if is_threat else ("allclear" if is_allclear else "info"),
+                proximity_score=prox_score,
+                location_terms=prox_terms,
+                is_allclear=is_allclear,
+            )
+        except Exception as _db_err:
+            log.error(f"threat_event DB write failed: {_db_err}")
         if is_threat:
             log.warning(f"THREAT [prox={prox_score}/10, terms={prox_terms}]: {reason}")
-            await send_notification(text, reason, cfg)
+            await send_notification(text, reason, cfg, channel_name=ch_name)
+        elif is_allclear:
+            log.info(f"ALL-CLEAR: {reason}")
+            await send_allclear_notification(cfg)
         else:
             log.info(f"No threat: {reason}")
 
@@ -332,6 +375,19 @@ async def main():
     # Initial region pattern refresh from DB locations
     await _refresh_pattern()
     asyncio.create_task(_periodic_refresh())
+
+    async def _periodic_shelter_update():
+        """Оновлювати кеш укриттів і KB-файл кожні 24 год."""
+        from shelter_search import refresh_shelters_kb
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        s_lat = float(cfg.get("city_lat", 48.6681))
+        s_lon = float(cfg.get("city_lon", 33.1170))
+        await refresh_shelters_kb(project_root, s_lat, s_lon, user_client=client)
+        while True:
+            await asyncio.sleep(86400)
+            await refresh_shelters_kb(project_root, s_lat, s_lon, user_client=client)
+
+    asyncio.create_task(_periodic_shelter_update())
 
     log.info(f"UAV watcher started. Watching {len(channels)} channel(s). Press Ctrl+C to stop.")
 
@@ -437,15 +493,50 @@ async def main():
     await bot_app.start(bot_token=cfg['bot_token'])
     log.info("Bot command handlers started.")
 
+    # --- SHARON TELEGRAM CHAT ---
+    @bot_app.on(events.NewMessage(pattern=r'^/start'))
+    async def cmd_start(event):
+        buttons = [
+            [KeyboardButtonCallback(b["text"], b["callback_data"].encode()) for b in row]
+            for row in THREAT_KEYBOARD
+        ]
+        await event.respond(
+            "👋 Привіт! Я *Sharon* — кризовий консультант.\n\n"
+            "Напишіть будь-яке питання або оберіть тип загрози нижче.\n"
+            "Команди: /help — меню загроз  •  /shelter — укриття поруч\n"
+            "/ok — я в безпеці  •  /sos — потрібна допомога",
+            buttons=buttons,
+            parse_mode='md'
+        )
+
+    @bot_app.on(events.NewMessage(
+        func=lambda e: e.is_private and bool(e.text) and not e.text.startswith('/')
+    ))
+    async def sharon_private_chat(event):
+        """Route any private text message to Sharon consultant."""
+        user_text = event.text.strip()
+        session_id = str(event.sender_id)
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as hc:
+                resp = await hc.post(
+                    "http://localhost:8770/chat",
+                    json={"message": user_text, "session_id": session_id},
+                )
+                resp.raise_for_status()
+                reply = resp.json().get("reply", "")
+        except Exception as e:
+            log.error(f"Sharon chat error: {e}")
+            reply = "Вибач, зараз не можу відповісти.\nЕкстрені: 101 (ДСНС), 112"
+        if reply:
+            await event.respond(reply)
+
     # --- FAMILY HANDLERS (Task 1.2) ---
     from family.bot_handlers import register_family_handlers
     register_family_handlers(bot_app, cfg, user_client=client)
-    log.info("Family bot handlers registered.")
 
     # --- LOCATION TRACKER (Task 2.1) ---
     from rescue.location_tracker import register_location_handlers
     register_location_handlers(bot_app, cfg)
-    log.info("Location tracker handlers registered.")
 
     await asyncio.gather(
         client.run_until_disconnected(),

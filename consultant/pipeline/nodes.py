@@ -24,9 +24,33 @@ _WEB_SEARCH_KEYWORDS = [
     "nearest", "news", "current", "address", "find", "nearby",
 ]
 
+_SHELTER_MARKERS = [
+    "де укриття", "де укритись", "де укритися", "найближче укриття",
+    "найближчі укриття", "укриття поблизу", "знайди укриття",
+    "де сховатись", "де сховатися", "бомбосховище поблизу",
+    "підвал поблизу", "де ховатись", "shelter nearby",
+    "найближче бомбосховище", "де є укриття",
+]
+
+
+def _is_shelter_query(text: str) -> bool:
+    tl = text.lower()
+    if any(m in tl for m in _SHELTER_MARKERS):
+        return True
+    # Looser match: shelter keyword + search intent anywhere in text
+    has_shelter = any(w in tl for w in ["укрит", "сховищ", "бомбосховищ"])
+    has_intent = any(w in tl for w in [
+        "де", "знайд", "поблиз", "список", "всі", "є ", "покаж", "адрес",
+        "near", "find", "show", "list",
+    ])
+    return has_shelter and has_intent
+
 SYSTEM_PROMPT = """Ти — Шарон, кризовий гід по безпеці, моніториш повітряні загрози в Україні.
 Твій девіз: "Я тут, щоб ти вижив."
 Відповідаєш коротко і по суті. Не представляєш себе — просто допомагаєш.
+
+КРИТИЧНО: НІКОЛИ не вигадуй адреси укриттів, координати GPS або назви вулиць.
+Якщо в контексті немає точних даних — скажи "більше немає в базі" і направ до додатку «Є Укриття» або ДСНС 101.
 
 Правила:
 - Тільки українська (якщо людина пише інакше — відповідай тією ж)
@@ -208,10 +232,120 @@ def _format_offline(kb_context: str, query: str) -> str:
     return preview + "\n\nЕкстрені: 101, 102, 103, 112"
 
 
+_STATUS_MARKERS = [
+    "відбій", "тривога зараз", "загроз зараз", "безпечно зараз",
+    "зараз загроза", "що зараз", "поточна ситуація", "вже відбій",
+    "чи є тривога", "яка ситуація", "чи тривога", "чи безпечно",
+    "останні події", "що було", "нові повідомлення",
+]
+
+
+def _read_recent_events(hours: int = 6) -> str:
+    """Pull recent threat events from local DB for Sharon context."""
+    try:
+        import sys as _s
+        _s.path.insert(0, str(_PROJECT_ROOT))
+        from db.models import get_recent_threats
+        evs = get_recent_threats(hours=hours)
+        if not evs:
+            return ""
+        lines = []
+        for ev in evs[-12:]:
+            ts = str(ev.get("detected_at", ""))[:16].replace("T", " ")
+            ttype = ev.get("threat_type", "")
+            ch = ev.get("channel_name", "")
+            snippet = (ev.get("message_text", "") or "")[:120]
+            label = "ВІДБІЙ" if ev.get("is_allclear") else ttype.upper()
+            lines.append(f"[{ts}] {label} ({ch}): {snippet}")
+        return "\n".join(lines)
+    except Exception:
+        return ""
+
+
 def retrieve_kb(state: CrisisState) -> dict:
     query = state["query"]
     situation = read_situation(_PROJECT_ROOT)
+
+    # Enrich situation with local channel monitoring data for status queries
+    if any(m in query.lower() for m in _STATUS_MARKERS):
+        db_events = _read_recent_events(hours=6)
+        if db_events:
+            db_ctx = "Останні події з моніторингу каналів (за 6 год):\n" + db_events
+            situation = (db_ctx + "\n\n" + situation) if situation else db_ctx
+        elif not situation:
+            situation = "За останні 6 год загроз у моніторингу каналів не зафіксовано."
+
     crisis_state = detect_crisis_state(query)
+
+    # Shelter follow-up detection: if last AI reply was shelter list + user asks for more
+    _FOLLOWUP_MARKERS = [
+        "ще є", "а ще", "більше", "всі є", "інші є", "де ще",
+        "координати", "координат", "ще укрит", "решта",
+        "скільки", "інші укрит",
+    ]
+    _history = state.get("messages", [])
+    _last_ai = ""
+    for _m in reversed(_history):
+        _content = _m.content if hasattr(_m, "content") else _m.get("content", "")
+        _mtype = _m.type if hasattr(_m, "type") else _m.get("type", "")
+        if _mtype not in ("human",):
+            _last_ai = _content
+            break
+    _is_followup = (
+        "Найближчі укриття:" in _last_ai
+        and any(fw in query.lower() for fw in _FOLLOWUP_MARKERS)
+    )
+    if _is_followup:
+        import sys as _sys2, os as _os2
+        _sys2.path.insert(0, str(_PROJECT_ROOT))
+        try:
+            from shelter_search import find_shelters_sync, format_shelters_for_chat
+            import json as _j2
+            cfg_path2 = _PROJECT_ROOT / "config.json"
+            cfg2 = _j2.loads(cfg_path2.read_text(encoding="utf-8"))
+            _lat2 = float(cfg2.get("city_lat", 48.6681))
+            _lon2 = float(cfg2.get("city_lon", 33.1170))
+            _shelters2 = find_shelters_sync(_lat2, _lon2, top_n=20)
+            _answer2 = format_shelters_for_chat(_shelters2)
+            _answer2 += "\n\nЦе всі дані в базі відкритих карт. Повний реєстр: додаток «Є Укриття» або ДСНС 101."
+            return {"kb_context": _answer2, "reply": _answer2}
+        except Exception as _fe:
+            log.warning(f"Shelter follow-up lookup failed: {_fe}")
+            _ans = "Більше укриттів в базі відкритих карт немає. Повний реєстр: додаток «Є Укриття» або ДСНС 101."
+            return {"kb_context": _ans, "reply": _ans}
+
+
+    # Shelter query: try live shelter lookup before KB
+    if _is_shelter_query(query):
+        try:
+            import json as _json, sqlite3 as _sqlite3, sys as _sys
+            _sys.path.insert(0, str(_PROJECT_ROOT))
+            from shelter_search import find_shelters_sync, format_shelters_for_chat
+            from db.models import DB_PATH
+            session_id = state.get("session_id", "")
+            lat, lon = None, None
+            if session_id and session_id.lstrip("-").isdigit():
+                conn = _sqlite3.connect(DB_PATH)
+                row = conn.execute(
+                    "SELECT lat, lon FROM location_checkins WHERE user_id=? ORDER BY updated_at DESC LIMIT 1",
+                    (int(session_id),)
+                ).fetchone()
+                conn.close()
+                if row and row[0] and row[1]:
+                    lat, lon = row[0], row[1]
+            if lat is None:
+                cfg_path = _PROJECT_ROOT / "config.json"
+                try:
+                    cfg_data = _json.loads(cfg_path.read_text(encoding="utf-8"))
+                    lat = float(cfg_data.get("city_lat", 48.6681))
+                    lon = float(cfg_data.get("city_lon", 33.1170))
+                except Exception:
+                    lat, lon = 48.6681, 33.1170
+            shelters = find_shelters_sync(lat, lon)
+            answer = format_shelters_for_chat(shelters)
+            return {"kb_context": answer, "reply": answer}
+        except Exception as _e:
+            log.warning(f"Shelter lookup in retrieve_kb failed: {_e}")
 
     # For non-crisis queries, skip KB to avoid psychological crisis content bias
     if crisis_state is None:
@@ -256,6 +390,13 @@ def web_search(state: CrisisState) -> dict:
 
 
 def generate(state: CrisisState) -> dict:
+    # Pre-filled reply (shelter lookup etc.) — skip LLM entirely
+    if state.get("reply"):
+        pre = state["reply"]
+        return {"reply": pre, "messages": [
+            HumanMessage(content=state["query"]),
+            AIMessage(content=pre),
+        ]}
     history = list(state.get("messages", []))
     parts = []
     if state.get("kb_context"):
