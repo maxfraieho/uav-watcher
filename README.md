@@ -7,7 +7,7 @@
 ```
 Telegram-канали (Telethon userbot)
     ↓  фільтр за ключовими словами міста
-AI-proxy (goclaw/fast-proxy)
+LLM-класифікація (Llama 4 Maverick / NVIDIA NIM)
     ↓  JSON: {"threat": true/false, "reason": "..."}
 Telegram Bot API → сповіщення в чат
 ```
@@ -79,9 +79,9 @@ python auth.py
   "channels": [-1001234567890],
   "bot_token": "1234567890:ABC...",
   "notify_chat_id": 123456789,
-  "goclaw_url": "http://localhost:18880/v1/chat/completions",
-  "goclaw_api_key": "freecc",
-  "goclaw_model": "fast-proxy"
+  "llm_proxy_url": "https://integrate.api.nvidia.com/v1",
+  "llm_proxy_token": "nvapi-YOUR_KEY",
+  "llm_proxy_model": "meta/llama-4-maverick-17b-128e-instruct"
 }
 ```
 
@@ -148,12 +148,10 @@ tail -f /var/log/uav-watcher.log
 
 ## Налагодження
 
-**Перевірити чи AI-proxy доступний:**
+**Перевірити чи LLM API доступний:**
 ```bash
-curl -s http://localhost:18880/v1/chat/completions \
-  -H "Authorization: Bearer freecc" \
-  -H "Content-Type: application/json" \
-  -d '{"model":"fast-proxy","messages":[{"role":"user","content":"ping"}],"max_tokens":10}' | python3 -m json.tool
+curl -s https://integrate.api.nvidia.com/v1/models \
+  -H "Authorization: Bearer nvapi-YOUR_KEY" | python3 -m json.tool
 ```
 
 **Перевірити Bot API:**
@@ -167,7 +165,7 @@ python3 -c "
 import asyncio, json, httpx, re
 from uav_watcher import ai_classify, load_config
 cfg = load_config()
-result = asyncio.run(ai_classify('Увага! БПЛА в бік Олександрії, Кіровоградська область!', cfg))
+result = asyncio.run(ai_classify('Увага! БПЛА в бік вашого міста!', cfg))
 print(result)
 "
 ```
@@ -186,6 +184,8 @@ pip install telethon httpx python-dotenv
 
 ## Конфігурація за замовчуванням
 
-- Місто: **Олександрія** (Кіровоградська область)
-- AI: goclaw proxy (`http://localhost:18880`) → модель `fast-proxy`
+- Місто: налаштовується через `config.json`
+- AI: NVIDIA NIM — `meta/llama-4-maverick-17b-128e-instruct` (або інший OpenAI-сумісний)
 - Порт веб-інтерфейсу: **8422**
+
+> Детальна документація: [docs/README.md](docs/README.md)
