@@ -455,7 +455,7 @@ async def main():
 
     # --- CRISIS CHATBOT BOT COMMANDS (Task 0.1) ---
     from bot.crisis_templates import TEMPLATES, THREAT_KEYBOARD, GROUNDING_STEPS
-    from telethon.tl.types import KeyboardButtonCallback
+    from telethon.tl.types import KeyboardButtonCallback, ReplyKeyboardMarkup, KeyboardButtonRow, KeyboardButton as KBButton
 
     bot_app = TelegramClient(
         os.path.join(os.path.dirname(__file__), "bot"),
@@ -540,20 +540,53 @@ async def main():
     log.info("Bot command handlers started.")
 
     # --- SHARON TELEGRAM CHAT ---
+    _MAIN_KEYBOARD = ReplyKeyboardMarkup(
+        rows=[
+            KeyboardButtonRow(buttons=[
+                KBButton(text="📍 Укриття поруч"),
+                KBButton(text="⚠️ Загрози зараз"),
+            ]),
+            KeyboardButtonRow(buttons=[
+                KBButton(text="📋 Типи загроз"),
+                KBButton(text="🧘 Заземлення"),
+            ]),
+        ],
+        resize=True,
+        persistent=True,
+    )
+
     @bot_app.on(events.NewMessage(pattern=r'^/start'))
     async def cmd_start(event):
-        buttons = [
+        await event.respond(
+            "👋 Привіт! Я *Sharon* — кризовий консультант.\n\n"
+            "Надішли питання або скористайся кнопками нижче.\n\n"
+            "📍 *Укриття поруч* — надішли геолокацію\n"
+            "⚠️ *Загрози зараз* — поточна ситуація\n"
+            "📋 *Типи загроз* — інструкції по кожному типу\n"
+            "🧘 *Заземлення* — техніка при паніці",
+            buttons=_MAIN_KEYBOARD,
+            parse_mode='md'
+        )
+
+    @bot_app.on(events.NewMessage(pattern=r'^📋 Типи загроз$'))
+    async def cmd_threat_menu_btn(event):
+        inline_buttons = [
             [KeyboardButtonCallback(b["text"], b["callback_data"].encode()) for b in row]
             for row in THREAT_KEYBOARD
         ]
+        await event.respond("🛡 *Оберіть тип загрози:*", buttons=inline_buttons, parse_mode='md')
+        raise events.StopPropagation
+
+    @bot_app.on(events.NewMessage(pattern=r'^🧘 Заземлення$'))
+    async def cmd_grounding_btn(event):
         await event.respond(
-            "👋 Привіт! Я *Sharon* — кризовий консультант.\n\n"
-            "Напишіть будь-яке питання або оберіть тип загрози нижче.\n"
-            "Команди: /help — меню загроз  •  /shelter — укриття поруч\n"
-            "/ok — я в безпеці  •  /sos — потрібна допомога",
-            buttons=buttons,
+            "🧘 *Техніка заземлення — зупинись і читай повільно:*\n\nЦе допоможе тобі повернутись у теперішній момент.",
             parse_mode='md'
         )
+        for step in GROUNDING_STEPS:
+            await asyncio.sleep(8)
+            await event.respond(step)
+        raise events.StopPropagation
 
     @bot_app.on(events.NewMessage(
         func=lambda e: e.is_private and bool(e.text) and not e.text.startswith('/')
