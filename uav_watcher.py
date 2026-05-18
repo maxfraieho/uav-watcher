@@ -539,6 +539,27 @@ async def main():
     await bot_app.start(bot_token=cfg['bot_token'])
     log.info("Bot command handlers started.")
 
+    # Register bot command menu (shown when user types "/" in Telegram)
+    try:
+        async with httpx.AsyncClient(timeout=10) as _hc:
+            await _hc.post(
+                f"https://api.telegram.org/bot{cfg['bot_token']}/setMyCommands",
+                json={
+                    "commands": [
+                        {"command": "shelter",       "description": "🏠 Найближчі укриття"},
+                        {"command": "ok",            "description": "✅ Я в порядку"},
+                        {"command": "sos",           "description": "🆘 Потрібна допомога"},
+                        {"command": "checkin",       "description": "📍 Зберегти моє місцезнаходження"},
+                        {"command": "family_status", "description": "👨‍👩‍👧 Статус родини"},
+                        {"command": "family_create", "description": "Створити сімейну групу"},
+                        {"command": "family_join",   "description": "Приєднатись до групи"},
+                    ]
+                },
+            )
+        log.info("Bot command menu registered (setMyCommands)")
+    except Exception as _e:
+        log.warning(f"setMyCommands failed: {_e}")
+
     # --- SHARON TELEGRAM CHAT ---
     _MAIN_KEYBOARD = ReplyKeyboardMarkup(
         rows=[
