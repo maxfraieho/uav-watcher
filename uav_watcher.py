@@ -619,6 +619,44 @@ async def main():
     @bot_app.on(events.NewMessage(
         func=lambda e: e.is_private and bool(e.text) and not e.text.startswith('/')
     ))
+    @bot_app.on(events.NewMessage(pattern=r"^⚠️ Загрози зараз$"))
+    async def cmd_threats_now_btn(event):
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as hc:
+                resp = await hc.post(
+                    "http://localhost:8770/chat",
+                    json={"message": "Яка зараз обстановка? Що написали канали за останню годину?",
+                          "session_id": str(event.sender_id)},
+                )
+                resp.raise_for_status()
+                reply = resp.json().get("reply", "")
+        except Exception as e:
+            log.error(f"threats_now Sharon error: {e}")
+            reply = "Не вдалось отримати дані.\nЕкстрені: 101 (ДСНС), 112"
+        detail_btn = [[KeyboardButtonCallback("📡 Деталізуй з каналів", b"detail_live")]]
+        await event.respond(reply, buttons=detail_btn)
+        raise events.StopPropagation
+
+    @bot_app.on(events.CallbackQuery(data=b"detail_live"))
+    async def handle_detail_live(event):
+        await event.answer()
+        await event.respond("⏳ Збираю дані з каналів...")
+        try:
+            async with httpx.AsyncClient(timeout=35.0) as hc:
+                resp = await hc.post(
+                    "http://localhost:8770/chat",
+                    json={"message": (
+                        "Процитуй дослівно повідомлення з Telegram-каналів за останні 2 години. "
+                        "Формат: [час] Канал: текст. Якщо повідомлень немає — так і скажи."
+                    ), "session_id": str(event.sender_id)},
+                )
+                resp.raise_for_status()
+                reply = resp.json().get("reply", "")
+        except Exception as e:
+            log.error(f"detail_live Sharon error: {e}")
+            reply = "Не вдалось отримати дані з каналів."
+        await event.respond(reply)
+
     async def sharon_private_chat(event):
         """Route any private text message to Sharon consultant."""
         user_text = event.text.strip()
