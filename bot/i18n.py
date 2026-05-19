@@ -93,6 +93,15 @@ STRINGS: dict[str, dict[str, str]] = {
         "fmt_hours_ago": "{n} год тому",
         "fmt_days_ago": "{n} дн тому",
         "fmt_unknown": "невідомо",
+        # checkin / location
+        "checkin_prompt": (
+            "📍 *Надішли свою геолокацію*\n\n"
+            "Натисни скрепку 📎 → Геолокація → Надіслати поточне місцезнаходження.\n\n"
+            "Вона буде збережена як твоє останнє відоме місцезнаходження "
+            "і передана рідним якщо ти не відповіси на rollcall."
+        ),
+        "location_saved": "📍 Геолокацію збережено. Шукаю укриття поблизу...",
+        "shelter_auto_err": "Помилка пошуку укриттів. Використай @e_shelter_bot",
     },
     "en": {
         "flag": "🇬🇧", "name": "English",
@@ -186,6 +195,15 @@ STRINGS: dict[str, dict[str, str]] = {
         "fmt_hours_ago": "{n} hr ago",
         "fmt_days_ago": "{n} days ago",
         "fmt_unknown": "unknown",
+        # checkin / location
+        "checkin_prompt": (
+            "📍 *Send your location*\n\n"
+            "Tap the paperclip 📎 → Location → Send current location.\n\n"
+            "It will be saved as your last known location "
+            "and shared with family if you don't respond to a rollcall."
+        ),
+        "location_saved": "📍 Location saved. Searching for nearby shelters...",
+        "shelter_auto_err": "Error finding shelters. Use @e_shelter_bot",
     },
     "de": {
         "flag": "🇩🇪", "name": "Deutsch",
@@ -279,6 +297,15 @@ STRINGS: dict[str, dict[str, str]] = {
         "fmt_hours_ago": "vor {n} Std",
         "fmt_days_ago": "vor {n} Tagen",
         "fmt_unknown": "unbekannt",
+        # checkin / location
+        "checkin_prompt": (
+            "📍 *Sende deinen Standort*\n\n"
+            "Tippe auf 📎 → Standort → Aktuellen Standort senden.\n\n"
+            "Er wird als dein letzter bekannter Standort gespeichert "
+            "und an deine Familie weitergegeben, wenn du nicht auf einen Rollcall antwortest."
+        ),
+        "location_saved": "📍 Standort gespeichert. Suche Schutzräume in der Nähe...",
+        "shelter_auto_err": "Fehler bei der Suche. Nutze @e_shelter_bot",
     },
     "fr": {
         "flag": "🇫🇷", "name": "Français",
@@ -372,6 +399,15 @@ STRINGS: dict[str, dict[str, str]] = {
         "fmt_hours_ago": "il y a {n} h",
         "fmt_days_ago": "il y a {n} j",
         "fmt_unknown": "inconnu",
+        # checkin / location
+        "checkin_prompt": (
+            "📍 *Envoie ta localisation*\n\n"
+            "Appuie sur 📎 → Localisation → Envoyer la position actuelle.\n\n"
+            "Elle sera enregistrée comme ta dernière position connue "
+            "et transmise à ta famille si tu ne réponds pas à un appel."
+        ),
+        "location_saved": "📍 Localisation enregistrée. Recherche d'abris à proximité...",
+        "shelter_auto_err": "Erreur lors de la recherche. Utilise @e_shelter_bot",
     },
     "pl": {
         "flag": "🇵🇱", "name": "Polski",
@@ -465,6 +501,15 @@ STRINGS: dict[str, dict[str, str]] = {
         "fmt_hours_ago": "{n} godz temu",
         "fmt_days_ago": "{n} dni temu",
         "fmt_unknown": "nieznane",
+        # checkin / location
+        "checkin_prompt": (
+            "📍 *Wyślij swoją lokalizację*\n\n"
+            "Naciśnij 📎 → Lokalizacja → Wyślij bieżącą lokalizację.\n\n"
+            "Zostanie zapisana jako twoja ostatnia znana lokalizacja "
+            "i przekazana rodzinie jeśli nie odpiszesz na apel."
+        ),
+        "location_saved": "📍 Lokalizacja zapisana. Szukam schronień w pobliżu...",
+        "shelter_auto_err": "Błąd wyszukiwania. Użyj @e_shelter_bot",
     },
 }
 
