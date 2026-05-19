@@ -472,8 +472,14 @@ async def main():
         prox_score, prox_terms = score_proximity(text, _main_kw_all_ref[0] if _main_kw_all_ref else keywords)
         async with ai_sem:
             is_threat, reason = await ai_classify(text, cfg)
-        # Classify all_clear
-        is_allclear = (not is_threat) and bool(_ALLCLEAR_PATTERNS.search(text))
+        # Classify all_clear — must match static city/region pattern, NOT GPS-expanded pattern.
+        # GPS expansion adds nearby settlements (e.g. Кропивницький) for threat detection;
+        # allclear for a distant settlement must not trigger allclear for the monitored city.
+        is_allclear = (
+            (not is_threat)
+            and bool(_ALLCLEAR_PATTERNS.search(text))
+            and bool(_static_pattern.search(text))
+        )
         # Persist to threat_events for statistics and consultant context
         try:
             from db.models import save_threat_event
