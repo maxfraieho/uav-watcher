@@ -7,28 +7,14 @@ import logging
 import os
 from datetime import datetime, timezone
 
+from bot.i18n import get as _t, fmt_last_seen as _fmt_last_seen_i18n
+from bot.lang_store import get_lang as _get_lang
+
 log = logging.getLogger(__name__)
 
 
-def _fmt_last_seen(ts_str) -> str:
-    if not ts_str:
-        return "невідомо"
-    try:
-        dt = datetime.fromisoformat(ts_str)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        diff = datetime.now(timezone.utc) - dt
-        minutes = int(diff.total_seconds() // 60)
-        if minutes < 1:
-            return "щойно"
-        if minutes < 60:
-            return f"{minutes} хв тому"
-        hours = minutes // 60
-        if hours < 24:
-            return f"{hours} год тому"
-        return f"{hours // 24} дн тому"
-    except Exception:
-        return str(ts_str)
+def _fmt_last_seen(ts_str, lang: str = "uk") -> str:
+    return _fmt_last_seen_i18n(lang, ts_str)
 
 
 async def _make_alert_call(user_client, target_user_id: int):
@@ -68,62 +54,51 @@ def register_family_handlers(bot_client, cfg, user_client=None):
     @bot_client.on(events.NewMessage(pattern=r'^/family_create(.*)'))
     async def cmd_family_create(event):
         sender = await event.get_sender()
+        lang = _get_lang(sender.id)
         name = (event.pattern_match.group(1) or "").strip()
         if not name:
-            await event.respond(
-                "Вкажи назву сімейної групи:\n`/family_create Моя родина`",
-                parse_mode='md'
-            )
+            await event.respond(_t(lang, "family_create_usage"), parse_mode='md')
             return
         family = create_family(name, sender.id)
         await event.respond(
-            f"Сімейну групу створено!\n\n"
-            f"Назва: {family['name']}\n"
-            f"Код запрошення: `{family['invite_code']}`\n\n"
-            f"Поділись кодом з рідними:\n"
-            f"`/family_join {family['invite_code']}`",
+            _t(lang, "family_created").format(
+                name=family['name'], code=family['invite_code']
+            ),
             parse_mode='md'
         )
 
     @bot_client.on(events.NewMessage(pattern=r'^/family_join(.*)'))
     async def cmd_family_join(event):
         sender = await event.get_sender()
+        lang = _get_lang(sender.id)
         code = (event.pattern_match.group(1) or "").strip().upper()
         if not code:
-            await event.respond(
-                "Вкажи код запрошення:\n`/family_join КОД`",
-                parse_mode='md'
-            )
+            await event.respond(_t(lang, "family_join_usage"), parse_mode='md')
             return
         name = f"{sender.first_name or ''} {sender.last_name or ''}".strip() or "Учасник"
         family = join_family(code, sender.id, sender.username, name)
         if family:
             await event.respond(
-                f"Ти доданий до сімї *{family['name']}*!\n"
-                f"При наступній тривозі бот запитає: чи ти в безпеці.",
+                _t(lang, "family_joined").format(name=family['name']),
                 parse_mode='md'
             )
         else:
-            await event.respond("Код не знайдено. Перевір правильність.")
+            await event.respond(_t(lang, "family_join_err"))
 
     @bot_client.on(events.NewMessage(pattern=r'^/family_status'))
     async def cmd_family_status(event):
         sender = await event.get_sender()
+        lang = _get_lang(sender.id)
         families = get_user_families(sender.id)
         if not families:
-            await event.respond(
-                "У тебе немає сімейних груп.\n"
-                "Створи: `/family_create Назва`\n"
-                "або приєднайся: `/family_join КОД`",
-                parse_mode='md'
-            )
+            await event.respond(_t(lang, "family_no_groups"), parse_mode='md')
             return
         lines = []
         for f in families:
             members = get_family_members(f['id'])
             lines.append(f"*{f['name']}* (код: `{f['invite_code']}`)")
             for m in members:
-                last = _fmt_last_seen(m.get("last_seen"))
+                last = _fmt_last_seen(m.get("last_seen"), lang)
                 note = m.get("ok_note") or ""
                 note_str = f" — {note}" if note else ""
                 marker = "" if m["user_id"] == sender.id else ""
@@ -133,11 +108,13 @@ def register_family_handlers(bot_client, cfg, user_client=None):
     @bot_client.on(events.NewMessage(pattern=r'^/ok(.*)'))
     async def cmd_ok(event):
         sender = await event.get_sender()
+        lang = _get_lang(sender.id)
         note = (event.pattern_match.group(1) or "").strip()
         update_last_seen(sender.id, note or None)
         families = get_user_families(sender.id)
         sender_name = sender.first_name or str(sender.id)
-        msg = f"{sender_name}: в порядку"
+        ok_note = _t(lang, "family_ok_note")
+        msg = f"{sender_name}: {ok_note}"
         if note:
             msg += f" — {note}"
         for family in families:
@@ -148,7 +125,7 @@ def register_family_handlers(bot_client, cfg, user_client=None):
                         await bot_client.send_message(m['user_id'], msg)
                     except Exception as e:
                         log.warning(f"Could not notify {m['user_id']}: {e}")
-        reply = "Статус оновлено: в порядку"
+        reply = _t(lang, "family_ok_updated")
         if note:
             reply += f" — {note}"
         await event.respond(reply)
@@ -156,13 +133,14 @@ def register_family_handlers(bot_client, cfg, user_client=None):
     @bot_client.on(events.NewMessage(pattern=r'^/sos|^/SOS'))
     async def cmd_sos(event):
         sender = await event.get_sender()
+        lang = _get_lang(sender.id)
         name = f"{sender.first_name or ''} {sender.last_name or ''}".strip() or "Учасник"
         families = get_user_families(sender.id)
         if not families:
-            await event.respond("Ти не в жодній сімейній групі.\n/family_join КОД")
+            await event.respond(_t(lang, "family_sos_no_group"))
             return
         sos_msg = f"SOS від {name}! Потрібна допомога! Зателефонуй негайно."
-        await event.respond("SOS надіслано всім членам твоїх сімейних груп.")
+        await event.respond(_t(lang, "family_sos_sent"))
         for family in families:
             members = get_family_members(family['id'])
             for m in members:
@@ -183,9 +161,11 @@ def register_family_handlers(bot_client, cfg, user_client=None):
         status = parts[1]
         rollcall_id = int(parts[2])
         sender = await event.get_sender()
+        lang = _get_lang(sender.id)
         record_rollcall_response(rollcall_id, sender.id, status)
-        update_last_seen(sender.id, "відповів на перевірку" if status == 'safe' else "SOS на перевірці")
-        label = "Відповідь збережено: В БЕЗПЕЦІ" if status == 'safe' else "Відповідь збережено: ПОТРІБНА ДОПОМОГА"
+        answered_note = _t(lang, "rollcall_answered")
+        update_last_seen(sender.id, answered_note if status == 'safe' else "SOS")
+        label = _t(lang, "rollcall_safe_response" if status == 'safe' else "rollcall_sos_response")
         await event.edit(label)
         await event.answer()
 
@@ -201,6 +181,7 @@ def register_family_handlers(bot_client, cfg, user_client=None):
     @bot_client.on(events.NewMessage(pattern=r'^/shelter'))
     async def cmd_shelter(event):
         sender = await event.get_sender()
+        lang = _get_lang(sender.id)
         import sqlite3 as _sqlite3
         from db.models import DB_PATH
         conn = _sqlite3.connect(DB_PATH)
@@ -210,12 +191,9 @@ def register_family_handlers(bot_client, cfg, user_client=None):
         ).fetchone()
         conn.close()
         if not row or not row[0]:
-            await event.respond(
-                "Не знаю твоєї локації.\n"
-                "Надішли геолокацію командою /location, потім знову /shelter"
-            )
+            await event.respond(_t(lang, "shelter_no_location"))
             return
-        await event.respond("🔍 Шукаю укриття поблизу...")
+        await event.respond(_t(lang, "shelter_searching"))
         import sys as _sys, os as _os
         _sys.path.insert(0, _os.path.dirname(_os.path.dirname(__file__)))
         from shelter_search import find_shelters_enhanced, format_shelters_for_chat
@@ -224,7 +202,7 @@ def register_family_handlers(bot_client, cfg, user_client=None):
             text = format_shelters_for_chat(shelters)
         except Exception as e:
             log.error(f"/shelter error: {e}")
-            text = "Помилка пошуку. Використай @e_shelter_bot"
+            text = _t(lang, "shelter_error")
         await event.respond(text)
 
     log.info("Family bot handlers registered.")

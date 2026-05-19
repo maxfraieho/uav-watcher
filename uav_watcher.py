@@ -592,7 +592,10 @@ async def main():
         log.info("alerts.in.ua official poller started in background")
 
     # --- CRISIS CHATBOT BOT COMMANDS (Task 0.1) ---
-    from bot.crisis_templates import TEMPLATES, THREAT_KEYBOARD, GROUNDING_STEPS
+    from bot.crisis_templates import (
+        TEMPLATES, THREAT_KEYBOARD, GROUNDING_STEPS,
+        get_threat_keyboard, get_grounding_steps, get_template_text,
+    )
     from bot.i18n import get as _t, action_for_button as _btn_action
     from bot.lang_store import get_lang as _get_lang, set_lang as _set_lang
     from telethon.tl.types import KeyboardButtonCallback, ReplyKeyboardMarkup, KeyboardButtonRow, KeyboardButton as KBButton
@@ -605,30 +608,27 @@ async def main():
 
     @bot_app.on(events.NewMessage(pattern='/help|/допомога|/що_робити'))
     async def cmd_help(event):
+        lang = _get_lang(event.sender_id)
         buttons = [
             [KeyboardButtonCallback(b["text"], b["callback_data"].encode()) for b in row]
-            for row in THREAT_KEYBOARD
+            for row in get_threat_keyboard(lang)
         ]
-        await event.respond(
-            "🛡 *Sharon — Кризовий консультант*\n\nОберіть тип загрози:",
-            buttons=buttons,
-            parse_mode='md'
-        )
+        await event.respond(_t(lang, "help_title"), buttons=buttons, parse_mode='md')
 
     @bot_app.on(events.CallbackQuery(pattern=b'crisis_(.+)'))
     async def handle_crisis_callback(event):
         threat_key = event.data.decode().replace('crisis_', '')
-        if threat_key in TEMPLATES:
-            await event.edit(TEMPLATES[threat_key]["text"], parse_mode='md')
+        lang = _get_lang(event.sender_id)
+        text = get_template_text(lang, threat_key)
+        if text:
+            await event.edit(text, parse_mode='md')
         await event.answer()
 
     @bot_app.on(events.NewMessage(pattern='/заземлення|/calm|/паніка'))
     async def cmd_grounding(event):
-        await event.respond(
-            "🧘 *Техніка заземлення — зупинись і читай повільно:*\n\nЦе допоможе тобі повернутись у теперішній момент.",
-            parse_mode='md'
-        )
-        for step in GROUNDING_STEPS:
+        lang = _get_lang(event.sender_id)
+        await event.respond(_t(lang, "grounding_intro"), parse_mode='md')
+        for step in get_grounding_steps(lang):
             await asyncio.sleep(8)
             await event.respond(step)
 
@@ -769,7 +769,7 @@ async def main():
         lang = _get_lang(event.sender_id)
         inline_buttons = [
             [KeyboardButtonCallback(b["text"], b["callback_data"].encode()) for b in row]
-            for row in THREAT_KEYBOARD
+            for row in get_threat_keyboard(lang)
         ]
         await event.respond(_t(lang, "threat_menu_title"), buttons=inline_buttons, parse_mode='md')
         raise events.StopPropagation
@@ -778,7 +778,7 @@ async def main():
     async def cmd_grounding_btn(event):
         lang = _get_lang(event.sender_id)
         await event.respond(_t(lang, "grounding_intro"), parse_mode='md')
-        for step in GROUNDING_STEPS:
+        for step in get_grounding_steps(lang):
             await asyncio.sleep(8)
             await event.respond(step)
         raise events.StopPropagation
