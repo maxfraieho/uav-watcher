@@ -56,6 +56,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 class ChatRequest(BaseModel):
     message: str
     session_id: Optional[str] = "default"
+    lang: Optional[str] = "uk"
 
 
 class ChatResponse(BaseModel):
@@ -84,6 +85,7 @@ def chat(req: ChatRequest):
                 "web_context": "",
                 "reply": "",
                 "session_id": req.session_id,
+                "lang": req.lang or "uk",
             },
             config={"configurable": {"thread_id": req.session_id}},
         )

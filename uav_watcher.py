@@ -122,6 +122,99 @@ _AIRARAID_PATTERNS = re.compile(
     re.IGNORECASE | re.UNICODE,
 )
 
+# ── Hot-reload globals (set in main(), used by hot_reload_city) ───────────────
+_main_cfg: dict | None = None
+_main_pattern_ref: list | None = None
+_main_kw_all_ref: list | None = None
+_RELOAD_SENTINEL = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                "data", ".reload_city")
+
+
+def _derive_region_keyword(city_region: str) -> str:
+    region_word = city_region.split()[0] if city_region else ""
+    if region_word.endswith("ська"):
+        region_word = region_word[:-4]
+    elif region_word.endswith("зька"):
+        region_word = region_word[:-4]
+    elif region_word.endswith("ька"):
+        region_word = region_word[:-1]
+    return region_word
+
+
+def _build_pattern(cfg: dict):
+    import re as _re
+    city = cfg.get("city", "")
+    keywords = cfg.get("city_keywords", [city])
+    city_region = cfg.get("city_region", "")
+    region_word = _derive_region_keyword(city_region)
+    region_keywords = cfg.get("region_keywords", [region_word] if region_word else [])
+    kw_all = [k for k in (keywords + region_keywords) if k]
+    if kw_all:
+        return _re.compile(
+            "|".join(_re.escape(k) for k in kw_all),
+            _re.IGNORECASE | _re.UNICODE,
+        ), kw_all
+    return _re.compile(r"\bx\B", _re.IGNORECASE), []
+
+
+def hot_reload_city(new_city_cfg: dict) -> None:
+    global _main_cfg, _main_pattern_ref, _main_kw_all_ref
+    if _main_cfg is None:
+        log.warning("[hot_reload] _main_cfg not initialized")
+        return
+    city_fields = ["city", "city_region", "city_keywords",
+                   "city_lat", "city_lon", "city_radius_km", "region_keywords"]
+    for field in city_fields:
+        if field in new_city_cfg:
+            _main_cfg[field] = new_city_cfg[field]
+    new_pattern, new_kw_all = _build_pattern(_main_cfg)
+    if _main_pattern_ref is not None:
+        _main_pattern_ref[0] = new_pattern
+    if _main_kw_all_ref is not None:
+        _main_kw_all_ref[0] = new_kw_all
+    try:
+        from pathlib import Path as _Path
+        cache_file = _Path(__file__).parent / "data" / "shelters_cache.json"
+        if cache_file.exists():
+            cache_file.unlink()
+            log.info("[hot_reload] Shelter cache invalidated")
+        summary_file = _Path(__file__).parent / "consultant" / "memory" / "channel_summary.json"
+        if summary_file.exists():
+            summary_file.unlink()
+            log.info("[hot_reload] channel_summary.json cleared")
+    except Exception as _e:
+        log.warning(f"[hot_reload] Could not clear caches: {_e}")
+    city = _main_cfg.get("city", "?")
+    lat = _main_cfg.get("city_lat", 0)
+    lon = _main_cfg.get("city_lon", 0)
+    log.info(f"[hot_reload] City changed to {city} ({lat:.4f}, {lon:.4f})")
+
+
+async def watch_config_reload() -> None:
+    import asyncio as _asyncio
+    import sys as _sys
+    from pathlib import Path as _Path
+    sentinel = _Path(_RELOAD_SENTINEL)
+    restart_sentinel = _Path(os.path.dirname(os.path.abspath(__file__))) / "data" / ".restart_bot"
+    log.info("[watch_config_reload] File watcher started")
+    while True:
+        await _asyncio.sleep(2)
+        if restart_sentinel.exists():
+            restart_sentinel.unlink(missing_ok=True)
+            sentinel.unlink(missing_ok=True)
+            log.info("[watch_config_reload] Bot token changed — restarting service")
+            await _asyncio.sleep(1)
+            _sys.exit(0)
+        if sentinel.exists():
+            try:
+                sentinel.unlink()
+                new_cfg = load_config()
+                hot_reload_city(new_cfg)
+                log.info("[watch_config_reload] Sentinel detected, city reloaded")
+            except Exception as _e:
+                log.error(f"[watch_config_reload] reload error: {_e}")
+
+
 def keyword_classify(text: str, city_keywords: list[str]) -> tuple[bool | None, str]:
     """
     Fast keyword pre-classifier.
@@ -334,6 +427,13 @@ async def main():
     # Mutable container — async tasks update _pattern_ref[0]
     _pattern_ref = [_static_pattern]
 
+    # Expose live refs for hot_reload_city()
+    global _main_cfg, _main_pattern_ref, _main_kw_all_ref
+    _main_cfg = cfg
+    _main_pattern_ref = _pattern_ref
+    _main_kw_all_ref = [_kw_all]
+    asyncio.create_task(watch_config_reload())
+
     async def _refresh_pattern():
         """Rebuild region pattern from all active family member GPS positions."""
         try:
@@ -366,7 +466,7 @@ async def main():
         ch_name = getattr(chat, "title", str(event.chat_id))
         log.info(f"Keyword matched [{ch_name}]: {text[:100]}...")
         # Score proximity before AI classification
-        prox_score, prox_terms = score_proximity(text, keywords)
+        prox_score, prox_terms = score_proximity(text, _main_kw_all_ref[0] if _main_kw_all_ref else keywords)
         async with ai_sem:
             is_threat, reason = await ai_classify(text, cfg)
         # Classify all_clear
@@ -490,6 +590,8 @@ async def main():
 
     # --- CRISIS CHATBOT BOT COMMANDS (Task 0.1) ---
     from bot.crisis_templates import TEMPLATES, THREAT_KEYBOARD, GROUNDING_STEPS
+    from bot.i18n import get as _t, action_for_button as _btn_action
+    from bot.lang_store import get_lang as _get_lang, set_lang as _set_lang
     from telethon.tl.types import KeyboardButtonCallback, ReplyKeyboardMarkup, KeyboardButtonRow, KeyboardButton as KBButton
 
     bot_app = TelegramClient(
@@ -582,6 +684,8 @@ async def main():
                 json={
                     "commands": [
                         {"command": "start",         "description": "▶️ Головне меню та типові ситуації"},
+                        {"command": "lang",          "description": "🌐 Змінити мову / Change language"},
+                        {"command": "setcity",      "description": "📍 Змінити місто"},
                         {"command": "shelter",       "description": "🏠 Найближчі укриття"},
                         {"command": "ok",            "description": "✅ Я в порядку"},
                         {"command": "sos",           "description": "🆘 Потрібна допомога"},
@@ -597,79 +701,115 @@ async def main():
         log.warning(f"setMyCommands failed: {_e}")
 
     # --- SHARON TELEGRAM CHAT ---
-    _MAIN_KEYBOARD = ReplyKeyboardMarkup(
-        rows=[
-            KeyboardButtonRow(buttons=[
-                KBButton(text="📍 Укриття поруч"),
-                KBButton(text="⚠️ Загрози зараз"),
-            ]),
-            KeyboardButtonRow(buttons=[
-                KBButton(text="📋 Типи загроз"),
-                KBButton(text="🧘 Заземлення"),
-            ]),
-        ],
-        resize=True,
-        persistent=True,
-    )
+    def _make_keyboard(lang: str = "uk") -> ReplyKeyboardMarkup:
+        return ReplyKeyboardMarkup(
+            rows=[
+                KeyboardButtonRow(buttons=[
+                    KBButton(text=_t(lang, "btn_shelter")),
+                    KBButton(text=_t(lang, "btn_threats")),
+                ]),
+                KeyboardButtonRow(buttons=[
+                    KBButton(text=_t(lang, "btn_threat_types")),
+                    KBButton(text=_t(lang, "btn_grounding")),
+                ]),
+            ],
+            resize=True,
+            persistent=True,
+        )
 
     @bot_app.on(events.NewMessage(pattern=r'^/start'))
     async def cmd_start(event):
+        lang = _get_lang(event.sender_id)
         await event.respond(
-            "👋 Привіт! Я *Sharon* — кризовий консультант.\n\n"
-            "Надішли питання або скористайся кнопками нижче.\n\n"
-            "📍 *Укриття поруч* — надішли геолокацію\n"
-            "⚠️ *Загрози зараз* — поточна ситуація\n"
-            "📋 *Типи загроз* — інструкції по кожному типу\n"
-            "🧘 *Заземлення* — техніка при паніці",
-            buttons=_MAIN_KEYBOARD,
+            _t(lang, "start_msg"),
+            buttons=_make_keyboard(lang),
             parse_mode='md'
         )
 
-    @bot_app.on(events.NewMessage(pattern=r'^📋 Типи загроз$'))
+    @bot_app.on(events.NewMessage(pattern=r'^/lang'))
+    async def cmd_lang(event):
+        from bot.i18n import STRINGS, LANGS
+        buttons = [[
+            KeyboardButtonCallback(
+                f"{STRINGS[lg]['flag']} {STRINGS[lg]['name']}",
+                f"setlang:{lg}".encode()
+            )
+            for lg in LANGS
+        ]]
+        await event.respond(_t(_get_lang(event.sender_id), "lang_prompt"), buttons=buttons, parse_mode='md')
+
+    @bot_app.on(events.CallbackQuery(pattern=rb'setlang:'))
+    async def handle_setlang(event):
+        from bot.i18n import LANGS, COMMANDS
+        lang = event.data.decode().split(":", 1)[1]
+        if lang not in LANGS:
+            await event.answer()
+            return
+        _set_lang(event.sender_id, lang)
+        # Update per-chat command menu to match chosen language
+        try:
+            async with httpx.AsyncClient(timeout=8) as _hc:
+                await _hc.post(
+                    f"https://api.telegram.org/bot{cfg['bot_token']}/setMyCommands",
+                    json={
+                        "commands": COMMANDS.get(lang, COMMANDS['uk']),
+                        "scope": {"type": "chat", "chat_id": event.sender_id},
+                    },
+                )
+        except Exception as _e:
+            log.warning(f"setMyCommands per-chat failed: {_e}")
+        await event.answer(_t(lang, "lang_chosen"))
+        await event.respond(_t(lang, "lang_chosen"), buttons=_make_keyboard(lang))
+
+    @bot_app.on(events.NewMessage(func=lambda e: e.is_private and _btn_action(e.text) == "threat_types"))
     async def cmd_threat_menu_btn(event):
+        lang = _get_lang(event.sender_id)
         inline_buttons = [
             [KeyboardButtonCallback(b["text"], b["callback_data"].encode()) for b in row]
             for row in THREAT_KEYBOARD
         ]
-        await event.respond("🛡 *Оберіть тип загрози:*", buttons=inline_buttons, parse_mode='md')
+        await event.respond(_t(lang, "threat_menu_title"), buttons=inline_buttons, parse_mode='md')
         raise events.StopPropagation
 
-    @bot_app.on(events.NewMessage(pattern=r'^🧘 Заземлення$'))
+    @bot_app.on(events.NewMessage(func=lambda e: e.is_private and _btn_action(e.text) == "grounding"))
     async def cmd_grounding_btn(event):
-        await event.respond(
-            "🧘 *Техніка заземлення — зупинись і читай повільно:*\n\nЦе допоможе тобі повернутись у теперішній момент.",
-            parse_mode='md'
-        )
+        lang = _get_lang(event.sender_id)
+        await event.respond(_t(lang, "grounding_intro"), parse_mode='md')
         for step in GROUNDING_STEPS:
             await asyncio.sleep(8)
             await event.respond(step)
         raise events.StopPropagation
 
-    @bot_app.on(events.NewMessage(
-        func=lambda e: e.is_private and bool(e.text) and not e.text.startswith('/')
-    ))
-    @bot_app.on(events.NewMessage(pattern=r"^⚠️ Загрози зараз$"))
+    @bot_app.on(events.NewMessage(func=lambda e: e.is_private and _btn_action(e.text) == "shelter"))
+    async def cmd_shelter_btn(event):
+        lang = _get_lang(event.sender_id)
+        await event.respond(_t(lang, "shelter_geo_msg"), parse_mode='md')
+        raise events.StopPropagation
+
+    @bot_app.on(events.NewMessage(func=lambda e: e.is_private and _btn_action(e.text) == "threats"))
     async def cmd_threats_now_btn(event):
+        lang = _get_lang(event.sender_id)
         try:
             async with httpx.AsyncClient(timeout=30.0) as hc:
                 resp = await hc.post(
                     "http://localhost:8770/chat",
                     json={"message": "Яка зараз обстановка? Що написали канали за останню годину?",
-                          "session_id": str(event.sender_id)},
+                          "session_id": str(event.sender_id), "lang": lang},
                 )
                 resp.raise_for_status()
                 reply = resp.json().get("reply", "")
         except Exception as e:
             log.error(f"threats_now Sharon error: {e}")
-            reply = "Не вдалось отримати дані.\nЕкстрені: 101 (ДСНС), 112"
-        detail_btn = [[KeyboardButtonCallback("📡 Деталізуй з каналів", b"detail_live")]]
+            reply = _t(lang, "threats_err")
+        detail_btn = [[KeyboardButtonCallback(_t(lang, "detail_btn"), b"detail_live")]]
         await event.respond(reply, buttons=detail_btn)
         raise events.StopPropagation
 
     @bot_app.on(events.CallbackQuery(data=b"detail_live"))
     async def handle_detail_live(event):
         await event.answer()
-        await event.respond("⏳ Збираю дані з каналів...")
+        lang = _get_lang(event.sender_id)
+        await event.respond(_t(lang, "detail_wait"))
         try:
             async with httpx.AsyncClient(timeout=35.0) as hc:
                 resp = await hc.post(
@@ -677,34 +817,38 @@ async def main():
                     json={"message": (
                         "Процитуй дослівно повідомлення з Telegram-каналів за останні 2 години. "
                         "Формат: [час] Канал: текст. Якщо повідомлень немає — так і скажи."
-                    ), "session_id": str(event.sender_id)},
+                    ), "session_id": str(event.sender_id), "lang": lang},
                 )
                 resp.raise_for_status()
                 reply = resp.json().get("reply", "")
         except Exception as e:
             log.error(f"detail_live Sharon error: {e}")
-            reply = "Не вдалось отримати дані з каналів."
+            reply = _t(lang, "detail_err")
         await event.respond(reply)
 
+    @bot_app.on(events.NewMessage(
+        func=lambda e: e.is_private and bool(e.text) and not e.text.startswith('/')
+    ))
     async def sharon_private_chat(event):
         """Route any private text message to Sharon consultant."""
         user_text = event.text.strip()
         session_id = str(event.sender_id)
+        lang = _get_lang(event.sender_id)
         # Shelter query without geolocation → ask for GPS
         if any(kw in user_text.lower() for kw in _SHELTER_KEYWORDS):
-            await event.respond(_SHELTER_GEO_MSG, parse_mode='md')
+            await event.respond(_t(lang, "shelter_geo_msg"), parse_mode='md')
             return
         try:
             async with httpx.AsyncClient(timeout=30.0) as hc:
                 resp = await hc.post(
                     "http://localhost:8770/chat",
-                    json={"message": user_text, "session_id": session_id},
+                    json={"message": user_text, "session_id": session_id, "lang": lang},
                 )
                 resp.raise_for_status()
                 reply = resp.json().get("reply", "")
         except Exception as e:
             log.error(f"Sharon chat error: {e}")
-            reply = "Вибач, зараз не можу відповісти.\nЕкстрені: 101 (ДСНС), 112"
+            reply = _t(lang, "chat_err")
         if reply:
             await event.respond(reply)
 
@@ -731,9 +875,20 @@ async def main():
 
     @bot_app.on(events.NewMessage(pattern=r'^/shelter'))
     async def cmd_shelter(event):
-        await event.respond(_SHELTER_GEO_MSG, parse_mode='md')
+        await event.respond(_t(_get_lang(event.sender_id), "shelter_geo_msg"), parse_mode='md')
 
     # --- LOCATION TRACKER (Task 2.1) ---
+    # --- CITY SWITCH (/setcity) ---
+    from bot.city_switch import register_setcity_handlers
+    from web_config import save_config as _save_config
+    register_setcity_handlers(
+        bot_app=bot_app,
+        cfg=cfg,
+        hot_reload_city_fn=hot_reload_city,
+        save_config_fn=_save_config,
+    )
+    log.info('/setcity handlers registered')
+
     from rescue.location_tracker import register_location_handlers
     register_location_handlers(bot_app, cfg, user_client=client)
 

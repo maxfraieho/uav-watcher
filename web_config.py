@@ -114,10 +114,30 @@ _CONFIG_LOCK = threading.Lock()
 
 def save_config(cfg: dict):
     tmp = CONFIG_PATH + ".tmp"
+    # Detect bot_token change → clear Telethon session so new token works
+    try:
+        _old = json.loads(open(CONFIG_PATH, encoding="utf-8").read())
+        _token_changed = _old.get("bot_token") != cfg.get("bot_token")
+    except Exception:
+        _token_changed = False
     with _CONFIG_LOCK:
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(cfg, f, ensure_ascii=False, indent=2)
         os.replace(tmp, CONFIG_PATH)
+    try:
+        from pathlib import Path
+        (Path(__file__).parent / "data" / ".reload_city").touch()
+    except Exception:
+        pass
+    if _token_changed:
+        try:
+            from pathlib import Path
+            session = Path(__file__).parent / "bot.session"
+            if session.exists():
+                session.unlink()
+            (Path(__file__).parent / "data" / ".restart_bot").touch()
+        except Exception:
+            pass
 
 
 def load_env() -> dict:
@@ -1550,18 +1570,45 @@ HTML = """<!DOCTYPE html>
       <form method="POST" action="/save-city">
       <div class="card-body">
         <div>
+          <label>Швидкий вибір</label>
+          <select name="preset" onchange="applyCityPreset(this.value)" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:.9rem">
+            <option value="">— вручну —</option>
+            {preset_options}
+          </select>
+        </div>
+        <div>
           <label data-i18n="lbl_city">Назва міста</label>
-          <input type="text" name="city" value="{city}" placeholder="Олександрія">
+          <input type="text" name="city" id="f_city" value="{city}" placeholder="Олександрія">
         </div>
         <div>
           <label data-i18n="lbl_region">Область</label>
-          <input type="text" name="city_region" value="{city_region}" placeholder="Кіровоградська область">
+          <input type="text" name="city_region" id="f_city_region" value="{city_region}" placeholder="Кіровоградська область">
         </div>
         <div>
           <label data-i18n="lbl_keywords">Ключові слова (через кому)</label>
-          <input type="text" name="city_keywords" value="{city_keywords}" placeholder="Олександрія, Олександрійськ">
+          <input type="text" name="city_keywords" id="f_city_keywords" value="{city_keywords}" placeholder="Олександрія, Олександрійськ">
           <div class="hint" style="margin-top:5px" data-i18n="hint_keywords">Слова для попередньої фільтрації — якщо жодне не знайдено в тексті, AI не викликається.</div>
         </div>
+        <div style="display:flex;gap:10px;margin-top:2px">
+          <div style="flex:1"><label>Широта</label><input type="number" step="0.0001" name="city_lat" id="f_city_lat" value="{city_lat}" placeholder="48.6681"></div>
+          <div style="flex:1"><label>Довгота</label><input type="number" step="0.0001" name="city_lon" id="f_city_lon" value="{city_lon}" placeholder="33.117"></div>
+          <div style="flex:0 0 110px"><label>Радіус км</label><input type="number" name="city_radius_km" id="f_city_radius_km" value="{city_radius_km}" placeholder="30"></div>
+        </div>
+        <div class="hint" style="margin-top:4px">Порожні координати — визначаться автоматично через геокодер.</div>
+        <script>
+        var _CITY_PRESETS = {city_preset_js};
+        function applyCityPreset(name) {
+          if (!name) return;
+          var p = _CITY_PRESETS[name];
+          if (!p) return;
+          document.getElementById('f_city').value = p.name;
+          document.getElementById('f_city_region').value = p.region;
+          document.getElementById('f_city_keywords').value = p.keywords.join(', ');
+          document.getElementById('f_city_lat').value = p.lat;
+          document.getElementById('f_city_lon').value = p.lon;
+          document.getElementById('f_city_radius_km').value = p.radius_km;
+        }
+        </script>
         <div class="btn-row">
           <button type="submit" class="btn btn-primary" data-i18n="btn_save">Зберегти</button>
         </div>
@@ -2633,6 +2680,19 @@ class Handler(BaseHTTPRequestHandler):
             "city": cfg.get("city", ""),
             "city_region": cfg.get("city_region", ""),
             "city_keywords": keywords_str,
+            "city_lat": str(cfg.get("city_lat", "")),
+            "city_lon": str(cfg.get("city_lon", "")),
+            "city_radius_km": str(cfg.get("city_radius_km", 30)),
+            "preset_options": "\n".join(
+                f'<option value="{p["name"]}">{p["name"]} ({p["region"]})</option>'
+                for p in (json.load(open(os.path.join(os.path.dirname(__file__), "data", "city_presets.json")))
+                          if os.path.exists(os.path.join(os.path.dirname(__file__), "data", "city_presets.json")) else [])
+            ),
+            "city_preset_js": json.dumps(
+                {p["name"]: p for p in (json.load(open(os.path.join(os.path.dirname(__file__), "data", "city_presets.json")))
+                                        if os.path.exists(os.path.join(os.path.dirname(__file__), "data", "city_presets.json")) else [])},
+                ensure_ascii=False
+            ),
             "phone": env.get("TELEGRAM_PHONE", ""),
             "api_id": env.get("TELEGRAM_API_ID", ""),
             "api_hash": env.get("TELEGRAM_API_HASH", ""),
@@ -2988,10 +3048,45 @@ class Handler(BaseHTTPRequestHandler):
             cfg = load_config()
 
             if path == "/save-city":
-                cfg["city"] = get("city")
-                cfg["city_region"] = get("city_region")
-                kw_raw = get("city_keywords")
-                cfg["city_keywords"] = [k.strip() for k in kw_raw.split(",") if k.strip()]
+                preset_name = get("preset")
+                if preset_name:
+                    try:
+                        _pp = os.path.join(os.path.dirname(__file__), "data", "city_presets.json")
+                        _presets = json.load(open(_pp))
+                        _p = next((x for x in _presets if x["name"] == preset_name), None)
+                        if _p:
+                            cfg["city"] = _p["name"]
+                            cfg["city_region"] = _p["region"]
+                            cfg["city_keywords"] = _p["keywords"]
+                            cfg["city_lat"] = _p["lat"]
+                            cfg["city_lon"] = _p["lon"]
+                            cfg["city_radius_km"] = _p["radius_km"]
+                    except Exception as _e:
+                        log.warning(f"preset load error: {_e}")
+                else:
+                    cfg["city"] = get("city")
+                    cfg["city_region"] = get("city_region")
+                    kw_raw = get("city_keywords")
+                    cfg["city_keywords"] = [k.strip() for k in kw_raw.split(",") if k.strip()]
+                    try:
+                        _lat = get("city_lat").strip()
+                        _lon = get("city_lon").strip()
+                        if _lat and _lon:
+                            cfg["city_lat"] = float(_lat)
+                            cfg["city_lon"] = float(_lon)
+                        else:
+                            _glat, _glon = geocode_city(cfg["city"])
+                            if _glat is not None:
+                                cfg["city_lat"] = _glat
+                                cfg["city_lon"] = _glon
+                    except Exception:
+                        pass
+                    try:
+                        _r = get("city_radius_km").strip()
+                        if _r:
+                            cfg["city_radius_km"] = int(_r)
+                    except Exception:
+                        pass
                 save_config(cfg)
                 self.redirect(flash="✓ Місто збережено")
 

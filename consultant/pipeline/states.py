@@ -9,3 +9,4 @@ class CrisisState(TypedDict):
     web_context: str
     reply: str
     session_id: str
+    lang: str

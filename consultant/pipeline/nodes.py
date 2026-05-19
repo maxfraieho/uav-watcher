@@ -183,13 +183,31 @@ FAB/КАБ — тільки спеціальне сховище ДСНС або 
 """
 
 
-CASUAL_SYSTEM_PROMPT = """Ти Шарон — AI-помічник з безпеки в Олександрії.
-Відповідай коротко і дружньо (1-3 речення). Тільки українська.
-Якщо питають про безпеку, тривогу, БПЛА, укриття — дай коротку пораду.
-Якщо питання загальне, грубе або не по темі — відповідай нейтрально: 1 речення, без нотацій.
-Не питай "Ти зараз сидиш?" без кризових ознак.
-Екстрені: 101 (ДСНС), 102, 103, 112.
-"""
+def _casual_system_prompt(lang: str = "uk") -> str:
+    import json as _j
+    try:
+        _cfg = _j.loads((_PROJECT_ROOT / "config.json").read_text(encoding="utf-8"))
+        _city = _cfg.get("city", "Олександрія")
+    except Exception:
+        _city = "Олександрія"
+    _LANG_RULES = {
+        "uk": "Відповідай ТІЛЬКИ українською мовою.",
+        "en": "ALWAYS respond in English only. Never use Ukrainian.",
+        "de": "Antworte NUR auf Deutsch. Verwende kein Ukrainisch.",
+        "fr": "Réponds UNIQUEMENT en français. N'utilise pas l'ukrainien.",
+        "pl": "Odpowiadaj TYLKO po polsku. Nie używaj ukraińskiego.",
+    }
+    _lang_rule = _LANG_RULES.get(lang, _LANG_RULES["uk"])
+    return (
+        f"Ти Шарон — AI-помічник з безпеки в {_city}.\n"
+        f"{_lang_rule}\n"
+        "Відповідай коротко і дружньо (1-3 речення).\n"
+        "Якщо питають про безпеку, тривогу, БПЛА, укриття — дай коротку пораду.\n"
+        "Якщо питання загальне або не по темі — відповідай нейтрально: 1 речення, без нотацій.\n"
+        "Не питай \"Ти зараз сидиш?\" без кризових ознак.\n"
+        "Екстрені: 101 (ДСНС), 102, 103, 112.\n"
+    )
+CASUAL_SYSTEM_PROMPT = _casual_system_prompt  # kept for backward compat
 
 
 def detect_crisis_state(text: str) -> str | None:
@@ -309,6 +327,34 @@ _STATUS_MARKERS = [
 ]
 
 
+# Cached city keywords — mirrors _get_proxy_cfg() pattern, TTL 30s
+_city_kw_cache: list | None = None
+_city_kw_ts: float = 0.0
+_CITY_KW_TTL = 30.0
+
+
+def _get_city_keywords() -> list[str]:
+    """Return current city_keywords from config.json (cached 30s)."""
+    global _city_kw_cache, _city_kw_ts
+    now = time.monotonic()
+    if _city_kw_cache is not None and now - _city_kw_ts < _CITY_KW_TTL:
+        return _city_kw_cache
+    import json as _json
+    config_path = _PROJECT_ROOT / "config.json"
+    try:
+        cfg = _json.loads(config_path.read_text(encoding="utf-8"))
+        kws = cfg.get("city_keywords") or []
+        city = cfg.get("city", "")
+        if city and city not in kws:
+            kws = [city] + kws
+        result = [k.lower() for k in kws if k]
+    except Exception:
+        result = []
+    _city_kw_cache = result
+    _city_kw_ts = now
+    return result
+
+
 def _read_recent_events(hours: int = 6) -> str:
     """Pull recent threat events from local DB for Sharon context."""
     try:
@@ -316,6 +362,14 @@ def _read_recent_events(hours: int = 6) -> str:
         _s.path.insert(0, str(_PROJECT_ROOT))
         from db.models import get_recent_threats
         evs = get_recent_threats(hours=hours)
+        if not evs:
+            return ""
+        # Filter to events relevant to current city
+        city_kws = _get_city_keywords()
+        if city_kws:
+            evs = [e for e in evs
+                   if any(k in (e.get('message_text') or '').lower() for k in city_kws)
+                   or any(k in (e.get('channel_name') or '').lower() for k in city_kws)]
         if not evs:
             return ""
         # Chronological order (oldest→newest) so LLM reads timeline correctly
@@ -531,10 +585,16 @@ def generate(state: CrisisState) -> dict:
     # Detect user's psychological state and hint to LLM
     raw_query = state["query"]
     crisis_state = detect_crisis_state(raw_query)
+    _lang = state.get("lang", "uk") or "uk"
+    try:
+        from bot.i18n import get as _t_bot
+        _lang_instr = _t_bot(_lang, "llm_lang_instruction")
+    except Exception:
+        _lang_instr = ""
     if crisis_state:
-        system_content = SYSTEM_PROMPT + f"\n\n[УВАГА: Виявлено стан — {crisis_state}. Адаптуй тон і формат відповіді відповідно.]"
+        system_content = _lang_instr + SYSTEM_PROMPT.replace("Тільки українська (якщо людина пише інакше — відповідай тією ж)", "") + f"\n\n[УВАГА: Виявлено стан — {crisis_state}. Адаптуй тон і формат відповіді відповідно.]"
     else:
-        system_content = CASUAL_SYSTEM_PROMPT
+        system_content = _lang_instr + _casual_system_prompt(_lang)
 
     msgs = [{"role": "system", "content": system_content}]
     for msg in history[-6:]:
