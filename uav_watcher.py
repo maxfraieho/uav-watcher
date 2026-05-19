@@ -511,6 +511,16 @@ async def main():
         else:
             log.info(f"No threat: {reason}")
 
+        # channel feed patch
+        try:
+            from consultant.memory.channel_feed import feed_message as _feed_msg
+            _ch_meta  = cfg.get("channels_meta", {}).get(str(event.chat_id), {})
+            _ch_title = _ch_meta.get("title", ch_name)
+            _feed_msg(text=text, channel_id=event.chat_id, channel_title=_ch_title, is_threat=is_threat, reason=reason)
+        except Exception as _fe:
+            log.debug(f"[memory] channel_feed error: {_fe}")
+
+
     await client.start(phone=os.environ["TELEGRAM_PHONE"])
 
     # Join all monitored channels so Telegram delivers updates to this account

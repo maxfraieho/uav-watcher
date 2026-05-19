@@ -28,11 +28,12 @@ MEMORY_DIR.mkdir(exist_ok=True)
 
 _observer = None
 _watcher_thread = None
+_summarizer_thread = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global _observer, _watcher_thread
+    global _observer, _watcher_thread, _summarizer_thread
     from knowledge_base import retrieval
     from knowledge_base.watcher import start_watcher as start_kb_watcher
     from situation_watcher import start_watcher as start_situation_watcher
@@ -43,6 +44,12 @@ async def lifespan(app: FastAPI):
         log.warning(f"[consultant] KB init failed: {e}")
     _observer = start_kb_watcher(KNOWLEDGE_DIR)
     _watcher_thread = start_situation_watcher(PROJECT_ROOT)
+    try:
+        from memory.summarizer import start_summarizer
+        _summarizer_thread = start_summarizer()
+        log.info("[consultant] Channel feed summarizer started")
+    except Exception as _se:
+        log.warning(f"[consultant] summarizer start failed: {_se}")
     yield
     if _observer:
         _observer.stop()
@@ -113,6 +120,27 @@ def session_clear(req: ChatRequest):
     except Exception as e:
         log.warning(f"[consultant] session clear failed: {e}")
         return {"cleared": False, "session_id": req.session_id}
+
+
+
+@app.get("/feed")
+def feed_stats():
+    """Channel feed stats — for web dashboard."""
+    from memory.channel_feed import get_stats, get_recent, get_threat_count
+    from memory.summarizer import read_channel_summary
+    return {
+        "stats": get_stats(),
+        "threat_count_1h": get_threat_count(3600),
+        "summary": read_channel_summary(),
+        "recent": get_recent(limit=10),
+    }
+
+
+@app.get("/feed/recent")
+def feed_recent(limit: int = 20, max_age_h: int = 2):
+    """Recent channel messages for debug/monitoring."""
+    from memory.channel_feed import get_recent
+    return {"messages": get_recent(limit=limit, max_age_sec=max_age_h * 3600)}
 
 
 @app.get("/situation")

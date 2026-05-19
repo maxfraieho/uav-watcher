@@ -528,6 +528,15 @@ def retrieve_kb(state: CrisisState) -> dict:
     kb = retrieve_text(query, top_k=3)
     if situation:
         kb = "Поточна ситуація з тривогами:\n" + situation + "\n\n" + kb
+    # Channel feed summary from summarizer (patch)
+    try:
+        from memory.summarizer import read_channel_summary
+        channel_summary = read_channel_summary()
+        if channel_summary:
+            kb = "[Зведення з каналів моніторингу]\n" + channel_summary + "\n\n" + kb
+    except Exception:
+        pass
+
     return {"kb_context": kb}
 
 
