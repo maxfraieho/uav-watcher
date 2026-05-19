@@ -272,9 +272,12 @@ async def ai_classify(text: str, cfg: dict) -> tuple[bool, str]:
 
     prompt = build_ai_prompt(text, city, region)
     try:
+        _llm_url = cfg.get("llm_proxy_url") or cfg.get("goclaw_url", "")
+        if _llm_url and not _llm_url.rstrip("/").endswith("/chat/completions"):
+            _llm_url = _llm_url.rstrip("/") + "/chat/completions"
         async with httpx.AsyncClient(timeout=15.0) as client:
             resp = await client.post(
-                cfg.get("llm_proxy_url") or cfg.get("goclaw_url", ""),
+                _llm_url,
                 headers={
                     "Authorization": f"Bearer {cfg.get('llm_proxy_token') or cfg.get('goclaw_api_key', '')}",
                     "Content-Type": "application/json",
@@ -799,7 +802,7 @@ async def main():
                 resp.raise_for_status()
                 reply = resp.json().get("reply", "")
         except Exception as e:
-            log.error(f"threats_now Sharon error: {e}")
+            log.error(f"threats_now Sharon error: {type(e).__name__}: {e!r}")
             reply = _t(lang, "threats_err")
         detail_btn = [[KeyboardButtonCallback(_t(lang, "detail_btn"), b"detail_live")]]
         await event.respond(reply, buttons=detail_btn)
