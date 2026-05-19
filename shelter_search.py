@@ -340,6 +340,39 @@ async def find_shelters(lat: float, lon: float,
     )
 
 
+_UA_SHELTER_PREFIXES = ("Укриття", "укриття", "Бомбосховище", "бомбосховище")
+_UA_BUILDING_TYPES = {
+    "багатоквартирний будинок": {"en": "apartment building", "de": "Mehrfamilienhaus", "fr": "immeuble", "pl": "blok"},
+    "підвал": {"en": "basement", "de": "Keller", "fr": "sous-sol", "pl": "piwnica"},
+    "цокольний поверх": {"en": "lower floor", "de": "Untergeschoss", "fr": "sous-sol", "pl": "suterena"},
+    "школа": {"en": "school", "de": "Schule", "fr": "école", "pl": "szkoła"},
+    "лікарня": {"en": "hospital", "de": "Krankenhaus", "fr": "hôpital", "pl": "szpital"},
+    "ліцей": {"en": "lyceum", "de": "Lyzeum", "fr": "lycée", "pl": "liceum"},
+    "гімназія": {"en": "gymnasium", "de": "Gymnasium", "fr": "gymnase", "pl": "gimnazjum"},
+    "будинок культури": {"en": "community center", "de": "Kulturhaus", "fr": "maison de la culture", "pl": "dom kultury"},
+}
+
+
+def _translate_shelter_name(name: str, lang: str) -> str:
+    """Translate generic Ukrainian OSM shelter name prefix for non-Ukrainian UI."""
+    if not name or lang == "uk":
+        return name
+    for pfx in _UA_SHELTER_PREFIXES:
+        if name.startswith(pfx):
+            from bot.i18n import get as _t
+            base = _t(lang, "shelter_default_name")
+            suffix = name[len(pfx):]
+            # Translate building type in parentheses if recognized
+            import re as _re
+            m = _re.match(r'^\s*\(([^)]+)\)\s*$', suffix)
+            if m:
+                btype = m.group(1).lower()
+                trans = _UA_BUILDING_TYPES.get(btype, {}).get(lang)
+                suffix = f" ({trans})" if trans else f" ({m.group(1)})"
+            return base + suffix
+    return name
+
+
 def format_shelters_for_chat(shelters: list, lang: str = "uk", city_center_fallback: bool = False) -> str:
     """Format shelter list for Telegram. lang controls UI language."""
     from bot.i18n import get as _t
@@ -349,7 +382,7 @@ def format_shelters_for_chat(shelters: list, lang: str = "uk", city_center_fallb
     for i, s in enumerate(shelters, 1):
         d = s["distance_m"]
         dist_str = f"{d} м" if d < 1000 else f"{d / 1000:.1f} км"
-        name = s.get("name") or _t(lang, "shelter_default_name")
+        name = _translate_shelter_name(s.get("name") or "", lang) or _t(lang, "shelter_default_name")
         addr = s.get("address") or ""
         lat, lon = s["lat"], s["lon"]
         line = f"{i}. {name}"
