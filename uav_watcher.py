@@ -427,6 +427,14 @@ async def main():
         "|".join(re.escape(k) for k in _kw_all) if _kw_all else r"\bx\B",
         re.IGNORECASE | re.UNICODE,
     )
+    # Allclear pattern: static keywords + city root form (adjective, e.g. Олександрі→Олександрійський).
+    # Used instead of GPS-expanded pattern so allclear for distant settlements is ignored.
+    _city_root = city[:-1] if len(city) > 5 else city
+    _allclear_kw = list({k for k in ([_city_root] + _kw_all) if k})
+    _allclear_pattern = re.compile(
+        "|".join(re.escape(k) for k in _allclear_kw) if _allclear_kw else r"\bx\B",
+        re.IGNORECASE | re.UNICODE,
+    )
     # Mutable container — async tasks update _pattern_ref[0]
     _pattern_ref = [_static_pattern]
 
@@ -472,13 +480,13 @@ async def main():
         prox_score, prox_terms = score_proximity(text, _main_kw_all_ref[0] if _main_kw_all_ref else keywords)
         async with ai_sem:
             is_threat, reason = await ai_classify(text, cfg)
-        # Classify all_clear — must match static city/region pattern, NOT GPS-expanded pattern.
-        # GPS expansion adds nearby settlements (e.g. Кропивницький) for threat detection;
-        # allclear for a distant settlement must not trigger allclear for the monitored city.
+        # Classify all_clear — must match _allclear_pattern (city root + region, no GPS expansion).
+        # GPS expansion adds nearby settlements for threat detection but must not allow
+        # allclear for a distant settlement to trigger allclear for the monitored city.
         is_allclear = (
             (not is_threat)
             and bool(_ALLCLEAR_PATTERNS.search(text))
-            and bool(_static_pattern.search(text))
+            and bool(_allclear_pattern.search(text))
         )
         # Persist to threat_events for statistics and consultant context
         try:
