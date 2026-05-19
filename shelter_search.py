@@ -340,21 +340,16 @@ async def find_shelters(lat: float, lon: float,
     )
 
 
-def format_shelters_for_chat(shelters: list) -> str:
-    """Форматує список укриттів для Telegram. Координати вказані одразу."""
+def format_shelters_for_chat(shelters: list, lang: str = "uk", city_center_fallback: bool = False) -> str:
+    """Format shelter list for Telegram. lang controls UI language."""
+    from bot.i18n import get as _t
     if not shelters:
-        return (
-            "Укриттів в базі відкритих карт (OSM) для цього місця не знайдено.\n\n"
-            "Знайди укриття:\n"
-            "• Додаток «Є Укриття» (iOS / Android)\n"
-            "• ДСНС: 101\n"
-            "• Зараз: нижній поверх, 2 несучих стіни між тобою і вулицею, далі від вікон."
-        )
-    lines = ["Найближчі укриття:"]
+        return _t(lang, "shelter_not_found")
+    lines = [_t(lang, "shelter_nearest")]
     for i, s in enumerate(shelters, 1):
         d = s["distance_m"]
         dist_str = f"{d} м" if d < 1000 else f"{d / 1000:.1f} км"
-        name = s.get("name") or "Укриття"
+        name = s.get("name") or _t(lang, "shelter_default_name")
         addr = s.get("address") or ""
         lat, lon = s["lat"], s["lon"]
         line = f"{i}. {name}"
@@ -364,10 +359,9 @@ def format_shelters_for_chat(shelters: list) -> str:
         line += f"\n   GPS: {lat:.5f}, {lon:.5f}"
         line += f"\n   {s['maps_link']}"
         lines.append(line)
-    lines.append(
-        "\n⚠️ Дані потребують верифікації.\n"
-        "Перевір самостійно: @UkraineShelterStfalconBot, додаток «Є Укриття» або ДСНС 101."
-    )
+    lines.append(_t(lang, "shelter_verify"))
+    if city_center_fallback:
+        lines.append(_t(lang, "shelter_city_center_note"))
     return "\n".join(lines)
 
 

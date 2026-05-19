@@ -461,9 +461,9 @@ def retrieve_kb(state: CrisisState) -> dict:
             cfg2 = _j2.loads(cfg_path2.read_text(encoding="utf-8"))
             _lat2 = float(cfg2.get("city_lat", 48.6681))
             _lon2 = float(cfg2.get("city_lon", 33.1170))
+            _lang2 = state.get("lang", "uk") or "uk"
             _shelters2 = find_shelters_sync(_lat2, _lon2, top_n=20)
-            _answer2 = format_shelters_for_chat(_shelters2)
-            _answer2 += "\n\nЦе всі дані в базі відкритих карт. Повний реєстр: додаток «Є Укриття» або ДСНС 101."
+            _answer2 = format_shelters_for_chat(_shelters2, lang=_lang2, city_center_fallback=True)
             return {"kb_context": _answer2, "reply": _answer2}
         except Exception as _fe:
             log.warning(f"Shelter follow-up lookup failed: {_fe}")
@@ -504,6 +504,7 @@ def retrieve_kb(state: CrisisState) -> dict:
                 conn.close()
                 if row and row[0] and row[1]:
                     lat, lon = row[0], row[1]
+            _city_fallback = (lat is None)
             if lat is None:
                 cfg_path = _PROJECT_ROOT / "config.json"
                 try:
@@ -512,8 +513,9 @@ def retrieve_kb(state: CrisisState) -> dict:
                     lon = float(cfg_data.get("city_lon", 33.1170))
                 except Exception:
                     lat, lon = 48.6681, 33.1170
+            _lang = state.get("lang", "uk") or "uk"
             shelters = find_shelters_sync(lat, lon)
-            answer = format_shelters_for_chat(shelters)
+            answer = format_shelters_for_chat(shelters, lang=_lang, city_center_fallback=_city_fallback)
             return {"kb_context": answer, "reply": answer}
         except Exception as _e:
             log.warning(f"Shelter lookup in retrieve_kb failed: {_e}")

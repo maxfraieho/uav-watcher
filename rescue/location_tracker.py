@@ -81,7 +81,7 @@ def register_location_handlers(bot_client, cfg, user_client=None):
         from shelter_search import find_shelters_enhanced, format_shelters_for_chat
         try:
             shelters = await find_shelters_enhanced(user_client, geo.lat, geo.long)
-            text = format_shelters_for_chat(shelters)
+            text = format_shelters_for_chat(shelters, lang=lang)
         except Exception as e:
             log.error(f"auto-shelter lookup: {e}")
             text = _t(lang, "shelter_auto_err")

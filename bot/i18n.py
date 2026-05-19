@@ -108,6 +108,22 @@ STRINGS: dict[str, dict[str, str]] = {
         ),
         "location_saved": "📍 Геолокацію збережено. Шукаю укриття поблизу...",
         "shelter_auto_err": "Помилка пошуку укриттів. Використай @e_shelter_bot",
+        "shelter_nearest": "Найближчі укриття:",
+        "shelter_not_found": (
+            "Укриттів в базі відкритих карт (OSM) для цього місця не знайдено.\n\n"
+            "Знайди укриття:\n"
+            "• Додаток «Є Укриття» (iOS / Android)\n"
+            "• ДСНС: 101\n"
+            "• Зараз: нижній поверх, 2 несучих стіни між тобою і вулицею, далі від вікон."
+        ),
+        "shelter_verify": (
+            "\n⚠️ Дані потребують верифікації.\n"
+            "Перевір самостійно: @UkraineShelterStfalconBot, додаток «Є Укриття» або ДСНС 101."
+        ),
+        "shelter_city_center_note": (
+            "_📍 Показую укриття від центру міста — надішли геолокацію для точних результатів._"
+        ),
+        "shelter_default_name": "Укриття",
     },
     "en": {
         "flag": "🇬🇧", "name": "English",
@@ -216,6 +232,22 @@ STRINGS: dict[str, dict[str, str]] = {
         ),
         "location_saved": "📍 Location saved. Searching for nearby shelters...",
         "shelter_auto_err": "Error finding shelters. Use @e_shelter_bot",
+        "shelter_nearest": "Nearest shelters:",
+        "shelter_not_found": (
+            "No shelters found in the OpenStreetMap database for this location.\n\n"
+            "Find shelters:\n"
+            "• App «Є Укриття» (iOS / Android)\n"
+            "• DSNS: 101\n"
+            "• Right now: lowest floor, 2 load-bearing walls between you and the street, away from windows."
+        ),
+        "shelter_verify": (
+            "\n⚠️ Data requires verification.\n"
+            "Check independently: @UkraineShelterStfalconBot, app «Є Укриття» or DSNS 101."
+        ),
+        "shelter_city_center_note": (
+            "_📍 Showing shelters from the city center — send your location for precise results._"
+        ),
+        "shelter_default_name": "Shelter",
     },
     "de": {
         "flag": "🇩🇪", "name": "Deutsch",
@@ -324,6 +356,22 @@ STRINGS: dict[str, dict[str, str]] = {
         ),
         "location_saved": "📍 Standort gespeichert. Suche Schutzräume in der Nähe...",
         "shelter_auto_err": "Fehler bei der Suche. Nutze @e_shelter_bot",
+        "shelter_nearest": "Nächste Schutzräume:",
+        "shelter_not_found": (
+            "Keine Schutzräume in der OpenStreetMap-Datenbank für diesen Ort gefunden.\n\n"
+            "Schutzräume finden:\n"
+            "• App «Є Укриття» (iOS / Android)\n"
+            "• DSNS: 101\n"
+            "• Jetzt: unterste Etage, 2 tragende Wände zwischen dir und der Straße, weg von Fenstern."
+        ),
+        "shelter_verify": (
+            "\n⚠️ Daten müssen verifiziert werden.\n"
+            "Selbst prüfen: @UkraineShelterStfalconBot, App «Є Укриття» oder DSNS 101."
+        ),
+        "shelter_city_center_note": (
+            "_📍 Zeige Schutzräume vom Stadtzentrum — sende deinen Standort für genaue Ergebnisse._"
+        ),
+        "shelter_default_name": "Schutzraum",
     },
     "fr": {
         "flag": "🇫🇷", "name": "Français",
@@ -432,6 +480,20 @@ STRINGS: dict[str, dict[str, str]] = {
         ),
         "location_saved": "📍 Localisation enregistrée. Recherche d'abris à proximité...",
         "shelter_auto_err": "Erreur lors de la recherche. Utilise @e_shelter_bot",
+        "shelter_nearest": "Abris les plus proches:",
+        "shelter_not_found": (
+            "Aucun abri trouvé dans la base OpenStreetMap pour cet endroit.\n\n"
+            "Trouver des abris:\n"
+            "• App «Є Укриття» (iOS / Android)\n"
+            "• DSNS: 101\n"
+            "• Maintenant: étage le plus bas, 2 murs porteurs entre toi et la rue, loin des fenêtres."
+        ),
+        "shelter_verify": (
+            "\n⚠️ Les données doivent être vérifiées.\n"
+            "Vérifie toi-même: @UkraineShelterStfalconBot, app «Є Укриття» ou DSNS 101."
+        ),
+        "shelter_city_center_note": "_📍 Abris depuis le centre-ville — envoie ta localisation pour des résultats précis._",
+        "shelter_default_name": "Abri",
     },
     "pl": {
         "flag": "🇵🇱", "name": "Polski",
@@ -540,6 +602,20 @@ STRINGS: dict[str, dict[str, str]] = {
         ),
         "location_saved": "📍 Lokalizacja zapisana. Szukam schronień w pobliżu...",
         "shelter_auto_err": "Błąd wyszukiwania. Użyj @e_shelter_bot",
+        "shelter_nearest": "Najbliższe schronienia:",
+        "shelter_not_found": (
+            "Nie znaleziono schronień w bazie OpenStreetMap dla tego miejsca.\n\n"
+            "Znajdź schronienie:\n"
+            "• App «Є Укриття» (iOS / Android)\n"
+            "• DSNS: 101\n"
+            "• Teraz: najniższe piętro, 2 ściany nośne między tobą a ulicą, z dala od okien."
+        ),
+        "shelter_verify": (
+            "\n⚠️ Dane wymagają weryfikacji.\n"
+            "Sprawdź samodzielnie: @UkraineShelterStfalconBot, app «Є Укриття» lub DSNS 101."
+        ),
+        "shelter_city_center_note": "_📍 Schronienia od centrum miasta — wyślij lokalizację dla dokładnych wyników._",
+        "shelter_default_name": "Schronienie",
     },
 }
 

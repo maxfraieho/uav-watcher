@@ -870,10 +870,13 @@ async def main():
         user_text = event.text.strip()
         session_id = str(event.sender_id)
         lang = _get_lang(event.sender_id)
-        # Shelter query without geolocation → ask for GPS
+        # Shelter query: if no saved location → ask for GPS; otherwise let consultant handle
         if any(kw in user_text.lower() for kw in _SHELTER_KEYWORDS):
-            await event.respond(_t(lang, "shelter_geo_msg"), parse_mode='md')
-            return
+            from rescue.location_tracker import get_last_location
+            if not get_last_location(event.sender_id):
+                await event.respond(_t(lang, "shelter_geo_msg"), parse_mode='md')
+                return
+            # Has saved location — fall through to consultant (will use it)
         try:
             async with httpx.AsyncClient(timeout=30.0) as hc:
                 resp = await hc.post(
