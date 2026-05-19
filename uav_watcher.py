@@ -837,13 +837,13 @@ async def main():
         lang = _get_lang(event.sender_id)
         await event.respond(_t(lang, "detail_wait"))
         try:
+            from datetime import datetime as _dt
+            _now_str = _dt.now().strftime("%H:%M")
             async with httpx.AsyncClient(timeout=35.0) as hc:
                 resp = await hc.post(
                     "http://localhost:8770/chat",
-                    json={"message": (
-                        "Процитуй дослівно повідомлення з Telegram-каналів за останні 2 години. "
-                        "Формат: [час] Канал: текст. Якщо повідомлень немає — так і скажи."
-                    ), "session_id": str(event.sender_id), "lang": lang},
+                    json={"message": _t(lang, "detail_query").format(now=_now_str),
+                          "session_id": str(event.sender_id), "lang": lang},
                 )
                 resp.raise_for_status()
                 reply = resp.json().get("reply", "")

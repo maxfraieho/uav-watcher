@@ -32,6 +32,11 @@ STRINGS: dict[str, dict[str, str]] = {
         "detail_btn": "📡 Деталізуй з каналів",
         "detail_wait": "⏳ Збираю дані з каналів...",
         "detail_err": "Не вдалось отримати дані з каналів.",
+        "detail_query": (
+            "Зараз {now}. Процитуй дослівно повідомлення з Telegram-каналів "
+            "за останні 30 хвилин. "
+            "Формат: [час] Канал: текст. Якщо повідомлень немає — так і скажи."
+        ),
         "threat_menu_title": "🛡 *Оберіть тип загрози:*",
         "help_title": "🛡 *Sharon — Кризовий консультант*\n\nОберіть тип загрози:",
         "llm_lang_instruction": "",
@@ -135,6 +140,11 @@ STRINGS: dict[str, dict[str, str]] = {
         "detail_btn": "📡 Detail from channels",
         "detail_wait": "⏳ Collecting data from channels...",
         "detail_err": "Couldn't retrieve data from channels.",
+        "detail_query": (
+            "Current time is {now}. Quote verbatim messages from Telegram channels "
+            "in the last 30 minutes. "
+            "Format: [time] Channel: text. If there are no messages, say so."
+        ),
         "threat_menu_title": "🛡 *Choose threat type:*",
         "help_title": "🛡 *Sharon — Crisis Assistant*\n\nChoose threat type:",
         "llm_lang_instruction": "\n\nIMPORTANT: Always respond in English regardless of the language the user writes in.",
@@ -238,6 +248,11 @@ STRINGS: dict[str, dict[str, str]] = {
         "detail_btn": "📡 Details aus Kanälen",
         "detail_wait": "⏳ Sammle Daten aus Kanälen...",
         "detail_err": "Daten aus Kanälen konnten nicht abgerufen werden.",
+        "detail_query": (
+            "Es ist jetzt {now}. Zitiere wörtlich Nachrichten aus Telegram-Kanälen "
+            "der letzten 30 Minuten. "
+            "Format: [Zeit] Kanal: Text. Falls keine Nachrichten, bitte sagen."
+        ),
         "threat_menu_title": "🛡 *Bedrohungstyp wählen:*",
         "help_title": "🛡 *Sharon — Krisenassistent*\n\nBedrohungstyp wählen:",
         "llm_lang_instruction": "\n\nWICHTIG: Antworte immer auf Deutsch, egal in welcher Sprache der Nutzer schreibt.",
@@ -341,6 +356,11 @@ STRINGS: dict[str, dict[str, str]] = {
         "detail_btn": "📡 Détails des canaux",
         "detail_wait": "⏳ Collecte de données...",
         "detail_err": "Impossible de récupérer les données des canaux.",
+        "detail_query": (
+            "Il est {now}. Citez mot pour mot les messages des chaînes Telegram "
+            "des 30 dernières minutes. "
+            "Format : [heure] Chaîne : texte. Si pas de messages, dites-le."
+        ),
         "threat_menu_title": "🛡 *Choisir le type de menace:*",
         "help_title": "🛡 *Sharon — Assistant de crise*\n\nChoisir le type de menace:",
         "llm_lang_instruction": "\n\nIMPORTANT: Répondez toujours en français quelle que soit la langue de l'utilisateur.",
@@ -444,6 +464,11 @@ STRINGS: dict[str, dict[str, str]] = {
         "detail_btn": "📡 Szczegóły z kanałów",
         "detail_wait": "⏳ Zbieram dane z kanałów...",
         "detail_err": "Nie udało się pobrać danych z kanałów.",
+        "detail_query": (
+            "Teraz jest {now}. Zacytuj dosłownie wiadomości z kanałów Telegram "
+            "z ostatnich 30 minut. "
+            "Format: [czas] Kanał: tekst. Jeśli nie ma wiadomości, powiedz o tym."
+        ),
         "threat_menu_title": "🛡 *Wybierz typ zagrożenia:*",
         "help_title": "🛡 *Sharon — Asystent kryzysowy*\n\nWybierz typ zagrożenia:",
         "llm_lang_instruction": "\n\nWAŻNE: Zawsze odpowiadaj po polsku niezależnie od języka użytkownika.",
