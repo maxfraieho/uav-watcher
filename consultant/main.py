@@ -99,6 +99,22 @@ def chat(req: ChatRequest):
     )
 
 
+@app.post("/session/clear")
+def session_clear(req: ChatRequest):
+    """Clear conversation history for a session (e.g. on language change)."""
+    from pipeline.graph import get_graph
+    try:
+        graph = get_graph()
+        storage = graph.checkpointer.storage
+        key = (req.session_id,)
+        cleared = key in storage
+        storage.pop(key, None)
+        return {"cleared": cleared, "session_id": req.session_id}
+    except Exception as e:
+        log.warning(f"[consultant] session clear failed: {e}")
+        return {"cleared": False, "session_id": req.session_id}
+
+
 @app.get("/situation")
 def situation():
     """Current situation from alerts.in.ua watchdog."""

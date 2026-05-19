@@ -24,6 +24,7 @@ STRINGS: dict[str, dict[str, str]] = {
             "_Без точної геолокації покажу укриття лише від центру міста — вони можуть бути далеко від тебе._"
         ),
         "grounding_intro": "🧘 *Техніка заземлення — зупинись і читай повільно:*\n\nЦе допоможе тобі повернутись у теперішній момент.",
+        "threats_query": "Яка зараз обстановка? Що написали канали за останню годину?",
         "threats_err": "Не вдалось отримати дані.\nЕкстрені: 101 (ДСНС), 112",
         "chat_err": "Вибач, зараз не можу відповісти.\nЕкстрені: 101 (ДСНС), 112",
         "lang_chosen": "🇺🇦 Мову змінено на Українську.",
@@ -126,6 +127,7 @@ STRINGS: dict[str, dict[str, str]] = {
             "_Without exact location I'll show shelters from the city center — they may be far from you._"
         ),
         "grounding_intro": "🧘 *Grounding technique — stop and read slowly:*\n\nThis will help you return to the present moment.",
+        "threats_query": "What's the current situation? What did the channels report in the last hour?",
         "threats_err": "Couldn't retrieve data.\nEmergency: 101 (DSNS), 112",
         "chat_err": "Sorry, I can't respond right now.\nEmergency: 101 (DSNS), 112",
         "lang_chosen": "🇬🇧 Language changed to English.",
@@ -228,6 +230,7 @@ STRINGS: dict[str, dict[str, str]] = {
             "_Ohne genauen Standort zeige ich Schutzräume vom Stadtzentrum — sie könnten weit weg sein._"
         ),
         "grounding_intro": "🧘 *Erdungstechnik — halte an und lies langsam:*\n\nDas hilft dir, in den Moment zurückzukehren.",
+        "threats_query": "Wie ist die aktuelle Lage? Was haben die Kanäle in der letzten Stunde gemeldet?",
         "threats_err": "Daten konnten nicht abgerufen werden.\nNotfall: 101 (DSNS), 112",
         "chat_err": "Entschuldigung, ich kann gerade nicht antworten.\nNotfall: 101 (DSNS), 112",
         "lang_chosen": "🇩🇪 Sprache auf Deutsch geändert.",
@@ -330,6 +333,7 @@ STRINGS: dict[str, dict[str, str]] = {
             "_Sans localisation précise je montrerai les abris du centre-ville._"
         ),
         "grounding_intro": "🧘 *Technique d'ancrage — arrêtez-vous et lisez lentement:*\n\nCela vous aidera à revenir au moment présent.",
+        "threats_query": "Quelle est la situation actuelle ? Qu'ont rapporté les canaux dans la dernière heure ?",
         "threats_err": "Impossible de récupérer les données.\nUrgence: 101 (DSNS), 112",
         "chat_err": "Désolé, je ne peux pas répondre maintenant.\nUrgence: 101 (DSNS), 112",
         "lang_chosen": "🇫🇷 Langue changée en Français.",
@@ -431,6 +435,7 @@ STRINGS: dict[str, dict[str, str]] = {
             "• lub: «+» → *Lokalizacja* → *Bieżąca lokalizacja*\n\n"
             "_Bez dokładnej lokalizacji pokażę schronienia z centrum miasta._"
         ),
+        "threats_query": "Jaka jest aktualna sytuacja? Co napisały kanały w ostatniej godzinie?",
         "grounding_intro": "🧘 *Technika uziemienia — zatrzymaj się i czytaj powoli:*\n\nTo pomoże ci wrócić do chwili obecnej.",
         "threats_err": "Nie udało się pobrać danych.\nNagłe: 101 (DSNS), 112",
         "chat_err": "Przepraszam, nie mogę teraz odpowiedzieć.\nNagłe: 101 (DSNS), 112",

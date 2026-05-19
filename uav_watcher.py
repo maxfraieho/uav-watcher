@@ -749,6 +749,15 @@ async def main():
             await event.answer()
             return
         _set_lang(event.sender_id, lang)
+        # Clear Sharon session history so next response is in the new language
+        try:
+            async with httpx.AsyncClient(timeout=5) as _hc:
+                await _hc.post(
+                    "http://localhost:8770/session/clear",
+                    json={"message": "", "session_id": str(event.sender_id)},
+                )
+        except Exception as _e:
+            log.warning(f"session/clear failed: {_e}")
         # Update per-chat command menu to match chosen language
         try:
             async with httpx.AsyncClient(timeout=8) as _hc:
@@ -796,7 +805,7 @@ async def main():
             async with httpx.AsyncClient(timeout=30.0) as hc:
                 resp = await hc.post(
                     "http://localhost:8770/chat",
-                    json={"message": "Яка зараз обстановка? Що написали канали за останню годину?",
+                    json={"message": _t(lang, "threats_query"),
                           "session_id": str(event.sender_id), "lang": lang},
                 )
                 resp.raise_for_status()
