@@ -44,7 +44,7 @@ def register_family_handlers(bot_client, cfg, user_client=None):
     from telethon import events
     from db.models import (
         init_db, create_family, join_family,
-        get_family_members, get_user_families,
+        get_family_members, get_family_members_bulk, get_user_families,
         start_rollcall, record_rollcall_response, get_rollcall_status,
         update_last_seen,
     )
@@ -94,8 +94,9 @@ def register_family_handlers(bot_client, cfg, user_client=None):
             await event.respond(_t(lang, "family_no_groups"), parse_mode='md')
             return
         lines = []
+        members_by_family = get_family_members_bulk([f['id'] for f in families])
         for f in families:
-            members = get_family_members(f['id'])
+            members = members_by_family.get(f['id'], [])
             lines.append(f"*{f['name']}* (код: `{f['invite_code']}`)")
             for m in members:
                 last = _fmt_last_seen(m.get("last_seen"), lang)
@@ -117,9 +118,9 @@ def register_family_handlers(bot_client, cfg, user_client=None):
         msg = f"{sender_name}: {ok_note}"
         if note:
             msg += f" — {note}"
+        members_by_family = get_family_members_bulk([f['id'] for f in families])
         for family in families:
-            members = get_family_members(family['id'])
-            for m in members:
+            for m in members_by_family.get(family['id'], []):
                 if m['user_id'] != sender.id:
                     try:
                         await bot_client.send_message(m['user_id'], msg)
@@ -141,9 +142,9 @@ def register_family_handlers(bot_client, cfg, user_client=None):
             return
         sos_msg = f"SOS від {name}! Потрібна допомога! Зателефонуй негайно."
         await event.respond(_t(lang, "family_sos_sent"))
+        members_by_family = get_family_members_bulk([f['id'] for f in families])
         for family in families:
-            members = get_family_members(family['id'])
-            for m in members:
+            for m in members_by_family.get(family['id'], []):
                 if m['user_id'] != sender.id:
                     try:
                         await bot_client.send_message(m['user_id'], sos_msg)

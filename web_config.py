@@ -13,6 +13,7 @@ import urllib.request
 import urllib.parse as _urllib_parse
 from http.server import BaseHTTPRequestHandler, HTTPServer, ThreadingHTTPServer
 import threading
+import concurrent.futures
 from urllib.parse import parse_qs, urlparse
 
 _shelter_cache: dict = {}   # {city_key: {"ts": float, "shelters": list}}
@@ -499,7 +500,7 @@ def send_sos_to_peers(cfg: dict, lat, lon):
         "city": cfg.get("city", ""),
         "tunnel_url": cfg.get("tunnel_url", ""),
     }, ensure_ascii=False).encode()
-    for peer_url in peers:
+    def _post_peer(peer_url):
         try:
             url = peer_url.rstrip("/") + "/api/sos-relay"
             req = urllib.request.Request(url, data=body, headers={
@@ -509,6 +510,10 @@ def send_sos_to_peers(cfg: dict, lat, lon):
             urllib.request.urlopen(req, timeout=8)
         except Exception:
             pass
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=len(peers)) as executor:
+        futures = [executor.submit(_post_peer, url) for url in peers]
+        concurrent.futures.wait(futures, timeout=10)
 
 
 def get_bot_info() -> tuple:

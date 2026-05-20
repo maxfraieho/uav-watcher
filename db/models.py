@@ -148,6 +148,34 @@ def get_family_members(family_id: int) -> list:
     return members
 
 
+def get_family_members_bulk(family_ids: list) -> dict:
+    """Return {family_id: [member_dict, ...]} for all given family IDs in one query."""
+    if not family_ids:
+        return {}
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    placeholders = ",".join("?" * len(family_ids))
+    c.execute(
+        f"SELECT family_id, user_id, username, display_name, last_seen, ok_note "
+        f"FROM family_members WHERE family_id IN ({placeholders})",
+        family_ids,
+    )
+    result: dict = {fid: [] for fid in family_ids}
+    for row in c.fetchall():
+        fid, uid, uname, dname, last_seen, ok_note = row
+        result[fid].append({
+            "family_id": fid,
+            "user_id": uid,
+            "username": uname,
+            "display_name": dname,
+            "name": dname or uname or str(uid),
+            "last_seen": last_seen,
+            "ok_note": ok_note,
+        })
+    conn.close()
+    return result
+
+
 def get_user_families(user_id: int) -> list:
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -186,11 +214,10 @@ def start_rollcall(family_id: int, threat_type: str) -> int:
     )
     rollcall_id = c.lastrowid
     members = get_family_members(family_id)
-    for m in members:
-        c.execute(
-            "INSERT INTO rollcall_responses (rollcall_id, user_id, status) VALUES (?,?,'no_response')",
-            (rollcall_id, m['user_id'])
-        )
+    c.executemany(
+        "INSERT INTO rollcall_responses (rollcall_id, user_id, status) VALUES (?,?,'no_response')",
+        [(rollcall_id, m['user_id']) for m in members],
+    )
     conn.commit()
     conn.close()
     return rollcall_id
