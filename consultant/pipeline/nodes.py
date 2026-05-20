@@ -397,11 +397,24 @@ def _read_recent_events(hours: int = 6) -> str:
                 "радіотехнічні війська",        # air force technical report
             ])
 
+        def _is_drill(ev):
+            t = (ev.get("message_text") or "").lower()
+            return any(p in t for p in [
+                "навчання",       # планові/тактичні навчання
+                "навчальн",       # навчальна тривога
+                "тренувальн",     # тренувальна тривога
+                "проводитимуть",  # "проводитимуться тактичні навчання"
+                "навчальна стрільба",
+                "стрільби",
+            ])
+
         cur = "Даних про стан тривоги немає"
         for ev in reversed(recent):
             if ev.get("is_allclear"):
                 cur = "ВІДБІЙ — активної тривоги немає"
                 break
+            if _is_drill(ev):
+                continue
             if not _is_poststrike(ev):
                 cur = f"ТРИВОГА АКТИВНА ({ev.get('threat_type','').upper()})"
                 break

@@ -125,7 +125,7 @@ def read_channel_summary(max_age_sec: int = MAX_AGE_VALID_SEC) -> str:
         count = data.get("threat_count_1h", 0)
         if count > 0:
             return f"{summary} (підтверджених загроз за останню годину: {count})"
-        return summary
+        return f"Підтверджених загроз за останню годину не зафіксовано. {summary}"
     except Exception:
         return ""
 
@@ -133,16 +133,19 @@ def read_channel_summary(max_age_sec: int = MAX_AGE_VALID_SEC) -> str:
 # ── Background thread ─────────────────────────────────────────────────────────
 
 _last_message_count = 0
+_last_threat_count = -1
 
 
 def _should_run() -> bool:
-    """Only regenerate summary if there are new messages since last run."""
-    global _last_message_count
-    from .channel_feed import get_stats
+    """Regenerate summary if new messages arrived or threat count changed (e.g. threat ended)."""
+    global _last_message_count, _last_threat_count
+    from .channel_feed import get_stats, get_threat_count
     stats = get_stats()
-    current = stats.get("total_messages", 0)
-    if current > _last_message_count:
-        _last_message_count = current
+    current_msgs = stats.get("total_messages", 0)
+    current_threats = get_threat_count(window_sec=3600)
+    if current_msgs > _last_message_count or current_threats != _last_threat_count:
+        _last_message_count = current_msgs
+        _last_threat_count = current_threats
         return True
     return False
 
