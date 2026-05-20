@@ -773,6 +773,10 @@ async def main():
             await event.answer()
             return
         _set_lang(event.sender_id, lang)
+        # Answer callback query IMMEDIATELY before any async HTTP calls
+        # to avoid QueryIdInvalidError (Telegram expires callback queries in 30s)
+        await event.answer(_t(lang, "lang_chosen"))
+        await event.respond(_t(lang, "lang_chosen"), buttons=_make_keyboard(lang))
         # Clear Sharon session history so next response is in the new language
         try:
             async with httpx.AsyncClient(timeout=5) as _hc:
@@ -794,8 +798,6 @@ async def main():
                 )
         except Exception as _e:
             log.warning(f"setMyCommands per-chat failed: {_e}")
-        await event.answer(_t(lang, "lang_chosen"))
-        await event.respond(_t(lang, "lang_chosen"), buttons=_make_keyboard(lang))
 
     @bot_app.on(events.NewMessage(func=lambda e: e.is_private and _btn_action(e.text) == "threat_types"))
     async def cmd_threat_menu_btn(event):
