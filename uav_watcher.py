@@ -826,7 +826,7 @@ async def main():
     async def cmd_threats_now_btn(event):
         lang = _get_lang(event.sender_id)
         try:
-            async with httpx.AsyncClient(timeout=30.0) as hc:
+            async with httpx.AsyncClient(timeout=90.0) as hc:
                 resp = await hc.post(
                     "http://localhost:8770/chat",
                     json={"message": _t(lang, "threats_query"),
@@ -849,7 +849,7 @@ async def main():
         try:
             from datetime import datetime as _dt
             _now_str = _dt.now().strftime("%H:%M")
-            async with httpx.AsyncClient(timeout=35.0) as hc:
+            async with httpx.AsyncClient(timeout=90.0) as hc:
                 resp = await hc.post(
                     "http://localhost:8770/chat",
                     json={"message": _t(lang, "detail_query").format(now=_now_str),
