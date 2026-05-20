@@ -1,8 +1,11 @@
 """LangGraph nodes: retrieve_kb -> web_search -> generate."""
+import logging
 import os
 import pathlib
 import time
 import httpx
+
+log = logging.getLogger(__name__)
 from langchain_core.messages import HumanMessage, AIMessage
 # Ensure consultant/ dir is on path so situation_watcher is importable from anywhere
 import pathlib as _pathlib, sys as _sys
@@ -632,7 +635,8 @@ def generate(state: CrisisState) -> dict:
     msgs.append({"role": "user", "content": user_content})
     try:
         reply = _llm_call(msgs)
-    except Exception:
+    except Exception as _e:
+        log.warning(f"[generate] LLM call failed: {_e}")
         reply = _format_offline(state.get("kb_context", ""), state["query"])
 
     # Guarantee crisis line for suicidal state
