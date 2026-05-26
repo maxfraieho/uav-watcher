@@ -17,6 +17,10 @@ _HERE = Path(__file__).parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
+# Додаємо корінь проекту до sys.path для підтримки імпорту sharon.*
+if str(_HERE.parent) not in sys.path:
+    sys.path.insert(0, str(_HERE.parent))
+
 log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
@@ -58,6 +62,14 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Sharon-consultant", version="0.1.0", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+# Підключаємо наш роутер для SSE трейсингу
+try:
+    from sharon.routes.pipeline_trace import router as pipeline_trace_router
+    app.include_router(pipeline_trace_router)
+    log.info("[consultant] Sharon threat trace router integrated successfully")
+except Exception as e:
+    log.error(f"[consultant] Failed to integrate Sharon threat trace router: {e}")
 
 
 class ChatRequest(BaseModel):

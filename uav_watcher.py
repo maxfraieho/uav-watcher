@@ -463,6 +463,11 @@ async def main():
     def region_pattern_search(text: str) -> bool:
         return bool(_pattern_ref[0].search(text))
 
+    # Channel flood control (Throttle): maximum 1 alert per 3 minutes (180 seconds) per channel
+    global _channel_throttles
+    _channel_throttles = {}
+    _CHANNEL_THROTTLE_SEC = 180
+
     ai_sem = asyncio.Semaphore(1)
 
     @client.on(events.NewMessage(chats=channels))
@@ -478,8 +483,103 @@ async def main():
         log.info(f"Keyword matched [{ch_name}]: {text[:100]}...")
         # Score proximity before AI classification
         prox_score, prox_terms = score_proximity(text, _main_kw_all_ref[0] if _main_kw_all_ref else keywords)
-        async with ai_sem:
-            is_threat, reason = await ai_classify(text, cfg)
+        
+        # --- LangGraph Threat Classifier Pipeline Integration ---
+        import uuid
+        job_id = str(uuid.uuid4())
+        log.info(f"[Sharon Watcher] Triggered threat analysis pipeline (job_id: {job_id}) for event from {ch_name}")
+        
+        severity_level = "LOW"
+        threat_type = "Невідомо"
+        is_threat = False
+        reason = ""
+        
+        try:
+            from sharon.pipelines.threat_classifier import get_graph, log_trace
+            
+            # Log graph start
+            log_trace(job_id, "graph", "node_start", {"status": "started", "channel": ch_name})
+            
+            graph = get_graph()
+            state = {
+                "text": text,
+                "threat_type": "Невідомо",
+                "region": "",
+                "time": "",
+                "severity": "LOW",
+                "formatted_text": "",
+                "job_id": job_id,
+                "error": None
+            }
+            
+            # Execute pipeline
+            result = await graph.ainvoke(state)
+            
+            severity_level = result.get("severity", "LOW")
+            threat_type = result.get("threat_type", "Невідомо")
+            reason = result.get("formatted_text", "")
+            is_threat = severity_level in ["MEDIUM", "HIGH", "CRITICAL"]
+            
+            # Log graph success
+            log_trace(job_id, "graph", "done", {"severity": severity_level, "threat_type": threat_type})
+            
+        except Exception as graph_err:
+            log.error(f"[Sharon Watcher] LangGraph pipeline failed: {graph_err}")
+            # Fallback to old ai_classify if possible
+            try:
+                from sharon.pipelines.threat_classifier import log_trace
+                log_trace(job_id, "graph", "error", {"error": str(graph_err)})
+            except Exception:
+                pass
+            
+            async with ai_sem:
+                is_threat, reason = await ai_classify(text, cfg)
+                severity_level = "HIGH" if is_threat else "LOW"
+        
+        # --- Channel Throttle Control (Flood control) ---
+        import time as _time_mod
+        current_time = _time_mod.time()
+        last_alert_time = _channel_throttles.get(event.chat_id, 0.0)
+        
+        if is_threat:
+            if current_time - last_alert_time < _CHANNEL_THROTTLE_SEC:
+                log.info(f"[Throttle] Suppressed alert for channel '{ch_name}' (ID: {event.chat_id}). Last alert was {current_time - last_alert_time:.1f}s ago (limit: {_CHANNEL_THROTTLE_SEC}s).")
+                is_threat = False  # Cancel alert dispatch due to throttle
+            else:
+                _channel_throttles[event.chat_id] = current_time
+                
+        # --- Direct Family Push Notification for HIGH/CRITICAL ---
+        if is_threat and severity_level in ["HIGH", "CRITICAL"]:
+            try:
+                import sqlite3
+                _db_family_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "families.db")
+                if os.path.exists(_db_family_path):
+                    conn = sqlite3.connect(_db_family_path)
+                    c = conn.cursor()
+                    c.execute("SELECT DISTINCT user_id FROM family_members")
+                    users = [row[0] for row in c.fetchall()]
+                    conn.close()
+                    
+                    log.info(f"[Sharon Watcher] Sending direct push notifications to {len(users)} registered family members for severity {severity_level}...")
+                    
+                    push_msg = (
+                        f"🚨 *ТЕРМІНОВЕ ОПОВІЩЕННЯ: {severity_level}*\n\n"
+                        f"{reason}\n\n"
+                        f"📡 Джерело: {ch_name}"
+                    )
+                    
+                    for uid in users:
+                        try:
+                            # Send direct message to user via bot
+                            await bot_app.send_message(uid, push_msg, parse_mode="Markdown")
+                            await asyncio.sleep(0.05)  # Telegram API rate limit mitigation
+                        except Exception as _push_delivery_err:
+                            log.error(f"[Sharon Watcher] Direct push failed to user {uid}: {_push_delivery_err}")
+                else:
+                    log.warning(f"[Sharon Watcher] families.db not found, skipping direct push notifications.")
+            except Exception as _push_err:
+                log.error(f"[Sharon Watcher] Direct push alerts query failed: {_push_err}")
+
         # Classify all_clear — must match _allclear_pattern (city root + region, no GPS expansion).
         # GPS expansion adds nearby settlements for threat detection but must not allow
         # allclear for a distant settlement to trigger allclear for the monitored city.
