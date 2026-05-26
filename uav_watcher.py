@@ -23,6 +23,8 @@ _NOTIFY_COOLDOWN_SEC = 90  # seconds between same-or-lower-level alerts
 _last_allclear_time: float = 0.0
 _ALLCLEAR_COOLDOWN_SEC = 300  # 5 min between all-clear notifications
 _active_threat: bool = False  # True only after a threat was actually sent to user
+_channel_throttles: dict = {}  # per-channel last alert timestamp
+_CHANNEL_THROTTLE_SEC = 180    # max 1 alert per 3 min per channel
 _STATE_FILE = os.path.join(os.path.dirname(__file__), "data", "threat_state.json")
 
 def _save_threat_state(active: bool) -> None:
