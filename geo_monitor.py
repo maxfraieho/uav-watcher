@@ -1,5 +1,5 @@
 """
-geo_monitor.py — Dynamic region pattern builder.
+geo_monitor.py â Dynamic region pattern builder.
 Reads all current family locations from DB, queries Overpass API for
 settlements within radius_m, builds a combined regex pattern.
 """
@@ -45,6 +45,7 @@ async def fetch_settlements(lat: float, lon: float) -> list[str]:
 
     log.info(f"Overpass: {len(names)} settlements within {RADIUS_M//1000}km of ({lat:.4f},{lon:.4f})")
     return names
+
 
 
 def _query_overpass(lat: float, lon: float) -> list[str]:
