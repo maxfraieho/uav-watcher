@@ -1,0 +1,15 @@
+{
+  "wing": "uav-watcher",
+  "index": [
+    "*.py",
+    "docs/**/*.md",
+    "HANDOFF.md"
+  ],
+  "exclude": [
+    ".env*",
+    "__pycache__/",
+    "*.pyc",
+    "config.json"
+  ],
+  "chunk_by": "function"
+}
