@@ -302,7 +302,7 @@ def _llm_call(messages: list[dict]) -> str:
     last_err = None
     for proxy in proxies:
         try:
-            with httpx.Client(timeout=25.0) as client:
+            with httpx.Client(timeout=45.0) as client:
                 resp = client.post(
                     f"{proxy['url']}/chat/completions",
                     json={"model": proxy["model"], "messages": messages, "temperature": 0.15},
