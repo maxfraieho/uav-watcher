@@ -3177,7 +3177,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.redirect(flash="✓ Bot token збережено")
 
             elif path == "/save-llm":
-                llm_proxies_raw = get("llm_proxies_json", "").strip()
+                llm_proxies_raw = get("llm_proxies_json")
                 if llm_proxies_raw:
                     try:
                         import json as _j
