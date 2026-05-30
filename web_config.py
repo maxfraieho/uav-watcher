@@ -1180,7 +1180,7 @@ HTML = """<!DOCTYPE html>
     background: var(--surface);
     border: 1px solid var(--border);
     border-top: 2px solid var(--accent);
-    border-radius: 2px; overflow: hidden;
+    border-radius: 2px; overflow: visible;
   }
   /* Section navigation */
   .section-nav {
@@ -1216,6 +1216,8 @@ HTML = """<!DOCTYPE html>
     padding: 11px 16px; border-bottom: 1px solid var(--border);
     display: flex; align-items: center; gap: 8px;
     background: rgba(0,0,0,0.22);
+    overflow: hidden;
+    border-radius: 2px 2px 0 0;
   }
   .card-title {
     font-family: var(--font); font-size: 12px; font-weight: 700;
@@ -2594,16 +2596,22 @@ function renderProxies() {
   if (!el) return;
   el.innerHTML = '';
   _proxies.forEach(function(p, i) {
-    el.innerHTML += '<div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">' +
-      '<span style="color:#888;font-size:11px;min-width:20px">#'+(i+1)+'</span>' +
-      '<input class="input" placeholder="Назва" value="'+escHtml(p.name||'')+'" oninput="_proxies['+i+'].name=this.value;syncProxies()" style="width:100px">' +
-      '<input class="input" placeholder="URL (https://...)" value="'+escHtml(p.url||'')+'" oninput="_proxies['+i+'].url=this.value;syncProxies()" style="flex:1">' +
-      '<input class="input" placeholder="Token" value="'+escHtml(p.token||'')+'" oninput="_proxies['+i+'].token=this.value;syncProxies()" style="width:120px">' +
-      '<input class="input" placeholder="Модель" value="'+escHtml(p.model||'')+'" oninput="_proxies['+i+'].model=this.value;syncProxies()" style="width:150px">' +
-      '<button type="button" onclick="moveProxy('+i+',-1)" style="background:#6b7280;color:#fff;border:none;border-radius:6px;padding:4px 8px;cursor:pointer" title="Вгору">↑</button>' +
-      '<button type="button" onclick="moveProxy('+i+',1)" style="background:#6b7280;color:#fff;border:none;border-radius:6px;padding:4px 8px;cursor:pointer" title="Вниз">↓</button>' +
-      '<button type="button" onclick="removeProxy('+i+')" style="background:#ef4444;color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer">✕</button>' +
-    '</div>';
+    el.innerHTML +=
+      '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:2px">' +
+        '<div style="display:flex;gap:6px;align-items:center">' +
+          '<span style="color:#888;font-size:11px;min-width:22px;flex-shrink:0">#'+(i+1)+'</span>' +
+          '<input class="ch-input" placeholder="Назва" value="'+escHtml(p.name||'')+'" oninput="_proxies['+i+'].name=this.value;syncProxies()" style="width:90px;flex-shrink:0;font-size:12px;padding:7px 10px">' +
+          '<input class="ch-input" placeholder="URL (https://...)" value="'+escHtml(p.url||'')+'" oninput="_proxies['+i+'].url=this.value;syncProxies()" style="flex:1;min-width:0;font-size:12px;padding:7px 10px">' +
+        '</div>' +
+        '<div style="display:flex;gap:6px;align-items:center">' +
+          '<span style="min-width:22px;flex-shrink:0"></span>' +
+          '<input class="ch-input" placeholder="Token" value="'+escHtml(p.token||'')+'" oninput="_proxies['+i+'].token=this.value;syncProxies()" style="flex:1;min-width:0;font-size:12px;padding:7px 10px">' +
+          '<input class="ch-input" placeholder="Модель" value="'+escHtml(p.model||'')+'" oninput="_proxies['+i+'].model=this.value;syncProxies()" style="width:140px;flex-shrink:0;font-size:12px;padding:7px 10px">' +
+          '<button type="button" onclick="moveProxy('+i+',-1)" style="background:var(--surface-low);color:var(--dim);border:1px solid var(--border);border-radius:2px;padding:5px 9px;cursor:pointer;flex-shrink:0" title="Вгору">↑</button>' +
+          '<button type="button" onclick="moveProxy('+i+',1)" style="background:var(--surface-low);color:var(--dim);border:1px solid var(--border);border-radius:2px;padding:5px 9px;cursor:pointer;flex-shrink:0" title="Вниз">↓</button>' +
+          '<button type="button" onclick="removeProxy('+i+')" style="background:transparent;color:#f87171;border:1px solid #991b1b;border-radius:2px;padding:5px 9px;cursor:pointer;flex-shrink:0">✕</button>' +
+        '</div>' +
+      '</div>';
   });
   syncProxies();
 }
