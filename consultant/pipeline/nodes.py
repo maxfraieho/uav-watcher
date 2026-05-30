@@ -377,6 +377,7 @@ def _read_recent_events(hours: int = 6) -> str:
         _s.path.insert(0, str(_PROJECT_ROOT))
         from db.models import get_recent_threats
         evs = get_recent_threats(hours=hours)
+        evs = [e for e in evs if e.get("threat_type") != "info"]
         if not evs:
             return ""
         # Filter to events relevant to current city
