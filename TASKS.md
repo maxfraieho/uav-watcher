@@ -102,3 +102,126 @@ SESSION:2026-05-30|TASK-83:web-config-responsive-proxy|commit:<hash>|fix:renderP
 4. SSH до 192.168.3.184:
    `sshpass -p '805235io.' ssh vokov@192.168.3.184 'sudo rc-service uav-web-config restart'`
 5. git commit + push від імені AGY3
+
+
+## [ ] TASK-85
+
+**Sharon не сповіщає про повітряну тривогу**
+
+### Проблема
+`sharon/pipelines/threat_classifier.py` → `assess_severity` не обробляє "повітряна тривога".
+Коли повідомлення містить "повітряна тривога в Олександрійський район" або "Кіровоградська область ПОВІТРЯНА ТРИВОГА":
+- `threat_type = "Невідомо"` (немає Шахед/Ракета/Балістика)
+- `city = "олександрія"` NOT in "олександрійський" (рядок не співпадає)
+- `score = 1` → severity = "LOW" → `decide_alert` → END → **сповіщення не надсилається**
+
+### Файл для зміни
+`sharon/pipelines/threat_classifier.py`
+
+### Що змінити
+В функції `assess_severity` (приблизно рядок 155), **після** блоку:
+```python
+    for m in ["над містом", "над нами", "над районом", "низько", "поряд", "поруч", "напрямок міста"]:
+        if m in text_lower:
+            score += 3
+            break
+```
+**Перед** рядком `severity = "LOW"` — вставити:
+
+```python
+    # Air raid alert in monitored region/city -> at minimum MEDIUM
+    _airraid_kw = ["повітряна тривог", "оголошено тривог", "тривогу оголош"]
+    if any(k in text_lower for k in _airraid_kw):
+        city_keywords = cfg.get("city_keywords", [city])
+        region_lower = cfg.get("city_region", "").lower()
+        city_root = city[:7] if len(city) >= 7 else city  # handles adjective forms: "олексан" -> "олександрійськ"
+        _airraid_hit = (
+            city in text_lower
+            or city_root in text_lower
+            or (region_lower and region_lower in text_lower)
+            or any(kw.lower() in text_lower for kw in city_keywords)
+        )
+        if _airraid_hit:
+            score = max(score, 4)  # MEDIUM: air raid alert for monitored region
+
+```
+
+**Старий код** (для пошуку точного місця вставки):
+```python
+            break
+
+    severity = "LOW"
+```
+
+**Новий код**:
+```python
+            break
+
+    # Air raid alert in monitored region/city -> at minimum MEDIUM
+    _airraid_kw = ["повітряна тривог", "оголошено тривог", "тривогу оголош"]
+    if any(k in text_lower for k in _airraid_kw):
+        city_keywords = cfg.get("city_keywords", [city])
+        region_lower = cfg.get("city_region", "").lower()
+        city_root = city[:7] if len(city) >= 7 else city  # handles adjective forms: "олексан" -> "олександрійськ"
+        _airraid_hit = (
+            city in text_lower
+            or city_root in text_lower
+            or (region_lower and region_lower in text_lower)
+            or any(kw.lower() in text_lower for kw in city_keywords)
+        )
+        if _airraid_hit:
+            score = max(score, 4)  # MEDIUM: air raid alert for monitored region
+
+    severity = "LOW"
+```
+
+### Верифікація
+```bash
+# SSH до 192.168.3.184:
+python3 -c "
+text = 'Кіровоградська область ПОВІТРЯНА ТРИВОГА'
+text_lower = text.lower()
+cfg = {'city': 'Олександрія', 'city_region': 'Кіровоградська область', 'city_keywords': ['Олександрія', 'Олександрійськ', 'Кіровоградщина']}
+city = cfg.get('city', '').lower()
+score = 1
+_airraid_kw = ['повітряна тривог', 'оголошено тривог', 'тривогу оголош']
+if any(k in text_lower for k in _airraid_kw):
+    city_root = city[:7] if len(city) >= 7 else city
+    region_lower = cfg.get('city_region', '').lower()
+    hit = city in text_lower or city_root in text_lower or (region_lower and region_lower in text_lower)
+    if hit:
+        score = max(score, 4)
+print('score:', score, '-> MEDIUM' if score >= 4 else '-> LOW FAIL!')
+"
+
+# Після перезапуску сервісу — дочекатись тривоги або вручну через logs:
+tail -20 /var/log/uav-watcher.log
+```
+Має бути `score: 4 -> MEDIUM`.
+
+### Деплой
+```bash
+# Після редагування файлу на AGY3:
+scp sharon/pipelines/threat_classifier.py vokov@192.168.3.184:/home/vokov/projects/uav-watcher/sharon/pipelines/threat_classifier.py
+sshpass -p '805235io.' ssh vokov@192.168.3.184 'sudo rc-service uav-watcher restart'
+```
+
+### Коміт
+```
+fix(threat-classifier): assess_severity handles air raid alerts for monitored region (TASK-85)
+```
+
+### Diary
+```
+SESSION:2026-05-30|TASK-85:airraid-severity-fix|commit:<hash>|fix:assess_severity+airraid_kw+city_root+score>=4->MEDIUM|★★★
+```
+
+### !!IMPORTANT!! Де запускати
+1. Клонуй або pull репо на AGY3 Termux:
+   `cd ~/projects/uav-watcher && git pull`
+2. Редагуй `sharon/pipelines/threat_classifier.py` ЛОКАЛЬНО на AGY3
+3. Скопіюй на сервер:
+   `scp sharon/pipelines/threat_classifier.py vokov@192.168.3.184:/home/vokov/projects/uav-watcher/sharon/pipelines/threat_classifier.py`
+4. SSH до 192.168.3.184:
+   `sshpass -p '805235io.' ssh vokov@192.168.3.184 'sudo rc-service uav-watcher restart'`
+5. git commit + push від імені AGY3
