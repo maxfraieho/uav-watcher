@@ -104,7 +104,7 @@ SESSION:2026-05-30|TASK-83:web-config-responsive-proxy|commit:<hash>|fix:renderP
 5. git commit + push від імені AGY3
 
 
-## [ ] TASK-85
+## [x] TASK-85
 
 **Sharon не сповіщає про повітряну тривогу**
 
