@@ -302,7 +302,7 @@ async def ai_classify(text: str, cfg: dict) -> tuple[bool, str]:
         return False, ""
 
 
-async def send_notification(text: str, reason: str, cfg: dict, channel_name: str = ""):
+async def send_notification(text: str, reason: str, cfg: dict, channel_name: str = "", channel_username: str = "", message_id: int = 0):
     """Send alert via Telegram Bot API (with dedup cooldown)."""
     global _last_notify_time, _last_notify_level, _active_threat
     import time
@@ -329,11 +329,15 @@ async def send_notification(text: str, reason: str, cfg: dict, channel_name: str
         header = f"⚠️ *МОНІТОРИНГ — {city}*"
         action = ""
     # Channel citation for level 2+
+    if channel_username and message_id:
+        direct_link = f"\n🔗 [Джерело](https://t.me/{channel_username}/{message_id})"
+    else:
+        direct_link = ""
     if level >= 2 and channel_name:
         cite = f"\n📡 _{channel_name}:_\n{safe_text}"
     else:
         cite = f"\n{safe_text}"
-    msg = f"{header}{cite}\n\n_Аналіз: {reason}_{action}"
+    msg = f"{header}{cite}\n\n_Аналіз: {reason}_{action}{direct_link}"
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.post(
@@ -482,6 +486,8 @@ async def main():
         # Identify source channel
         chat = await event.get_chat()
         ch_name = getattr(chat, "title", str(event.chat_id))
+        ch_username = getattr(chat, "username", "") or ""
+        msg_id = event.message.id
         log.info(f"Keyword matched [{ch_name}]: {text[:100]}...")
         # Score proximity before AI classification
         prox_score, prox_terms = score_proximity(text, _main_kw_all_ref[0] if _main_kw_all_ref else keywords)
@@ -606,7 +612,7 @@ async def main():
             log.error(f"threat_event DB write failed: {_db_err}")
         if is_threat:
             log.warning(f"THREAT [prox={prox_score}/10, terms={prox_terms}]: {reason}")
-            await send_notification(text, reason, cfg, channel_name=ch_name)
+            await send_notification(text, reason, cfg, channel_name=ch_name, channel_username=ch_username, message_id=msg_id)
         elif is_allclear:
             log.info(f"ALL-CLEAR: {reason}")
             await send_allclear_notification(cfg)
