@@ -1,6 +1,6 @@
 # UAV-Watcher Tasks
 
-[ ] TASK-83
+[x] TASK-83
 ## Fix: web-config responsive layout — LLM proxy rows overflow on mobile
 
 ### Проблема
