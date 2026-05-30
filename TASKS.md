@@ -225,3 +225,136 @@ SESSION:2026-05-30|TASK-85:airraid-severity-fix|commit:<hash>|fix:assess_severit
 4. SSH до 192.168.3.184:
    `sshpass -p '805235io.' ssh vokov@192.168.3.184 'sudo rc-service uav-watcher restart'`
 5. git commit + push від імені AGY3
+
+
+## [ ] TASK-86
+
+**catchup не оновлює _active_threat після пропущеного відбою**
+
+### Проблема
+При рестарті watcher-а `_catchup_history()` знаходить пропущені події і зберігає в БД,
+але НЕ відправляє сповіщення і НЕ оновлює `_active_threat`.
+
+Сценарій (трапився 2026-05-30):
+1. 18:15:58 — відбій Олександрійського району в Суспільне Кропивницький
+2. 18:16:07 — сервіс перезапустився (через 9 сек!)
+3. 18:16 catchup: знайшов відбій, зберіг у БД → але `_active_threat` залишився True
+4. Наступні відбої не надсилаються (cooldown або стан не оновлено)
+
+### Файл для зміни
+`uav_watcher.py` — функція `_catchup_history()` (рядки ~672-714)
+
+### Що змінити
+
+Після поточного головного циклу (що зберігає події в БД), додати другий прохід:
+якщо catchup знайшов all-clear для моніторованого міста та `_active_threat=True` →
+оновити стан без відправки сповіщення (щоб не спамити).
+
+Якщо catchup знайшов threshold-подію (тривога) і `_active_threat=False` →
+відправити ОДНЕ запізніле сповіщення (з відміткою "(запізніло)").
+
+**Старий код** (кінець функції `_catchup_history`, рядок ~711-713):
+```python
+            except Exception as _ce:
+                log.warning(f"[catchup] channel {ch_id}: {_ce}")
+        log.info(f"[catchup] Done. Inserted {total} missed events.")
+```
+
+**Новий код** (замінити останній рядок функції):
+```python
+            except Exception as _ce:
+                log.warning(f"[catchup] channel {ch_id}: {_ce}")
+        log.info(f"[catchup] Done. Inserted {total} missed events.")
+
+        # --- Sync _active_threat from missed events ---
+        global _active_threat
+        cutoff_sync = _time.time() - 2 * 3600  # check last 2h
+        had_threat = False
+        had_allclear = False
+        last_threat_text = ""
+        last_threat_ch = ""
+
+        for ch_id in channels:
+            try:
+                async for msg in client.iter_messages(ch_id, limit=100):
+                    if not msg.text:
+                        continue
+                    if msg.date.timestamp() < cutoff_sync:
+                        break
+                    txt = msg.text
+                    is_ac = bool(_ALLCLEAR_PATTERNS.search(txt)) and bool(_allclear_pattern.search(txt))
+                    is_th = bool(region_pattern_search(txt)) and not _ALLCLEAR_PATTERNS.search(txt)
+                    if is_ac:
+                        had_allclear = True
+                    elif is_th and not had_allclear:
+                        had_threat = True
+                        last_threat_text = txt
+                        try:
+                            chat = await client.get_entity(ch_id)
+                            last_threat_ch = getattr(chat, "title", str(ch_id))
+                        except Exception:
+                            last_threat_ch = str(ch_id)
+            except Exception:
+                pass
+
+        if had_allclear and _active_threat:
+            log.info("[catchup] Missed all-clear detected → _active_threat=False")
+            _active_threat = False
+            _save_threat_state(False)
+        elif had_threat and not _active_threat and last_threat_text:
+            log.warning(f"[catchup] Missed threat detected → sending late notification")
+            await send_notification(
+                last_threat_text + "\n\n_(сповіщення запізнилось — watcher перезапускався)_",
+                "пропущена загроза",
+                cfg,
+                channel_name=last_threat_ch,
+            )
+```
+
+**ВАЖЛИВО:** `region_pattern_search` — це функція яка вже є в scope (глобальна або closure).
+Перевір що ця функція доступна з `_catchup_history`. Якщо ні — використай:
+```python
+is_th = bool(_THREAT_PATTERNS.search(txt)) or any(k in txt.lower() for k in ["тривога", "бпла", "ракет"])
+```
+
+### Верифікація
+```bash
+# SSH до 192.168.3.184, перезапустити сервіс і перевірити лог:
+sudo rc-service uav-watcher restart
+sleep 5
+tail -20 /var/log/uav-watcher.log | grep -E '(catchup|active_threat|Inserted)'
+# Має бути "[catchup] Done. Inserted N missed events." без помилок
+```
+
+Також перевірити що синтаксично правильно:
+```bash
+cd /home/vokov/projects/uav-watcher
+python3 -c "import uav_watcher; print('syntax OK')" 2>&1 | head -5
+```
+
+### Деплой
+```bash
+scp uav_watcher.py vokov@192.168.3.184:/home/vokov/projects/uav-watcher/uav_watcher.py
+sshpass -p '805235io.' ssh vokov@192.168.3.184 'sudo rc-service uav-watcher restart'
+```
+
+### Коміт
+```
+fix(catchup): sync _active_threat from missed all-clears on restart (TASK-86)
+```
+
+### Diary
+```
+SESSION:2026-05-30|TASK-86:catchup-allclear-sync|commit:<hash>|fix:_catchup_history+allclear-state-sync+late-threat-notify|★★★
+```
+
+### !!IMPORTANT!! Де запускати
+1. ЛОКАЛЬНО на AGY3 Termux:
+   `cd ~/projects/uav-watcher && git pull`
+2. Редагуй `uav_watcher.py` локально на AGY3
+3. Перевір синтаксис: `python3 -m py_compile uav_watcher.py && echo OK`
+4. Скопіюй на сервер:
+   `scp uav_watcher.py vokov@192.168.3.184:/home/vokov/projects/uav-watcher/uav_watcher.py`
+5. SSH до сервера:
+   `sshpass -p '805235io.' ssh vokov@192.168.3.184 'sudo rc-service uav-watcher restart && sleep 3 && tail -10 /var/log/uav-watcher.log'`
+6. git commit + push від імені AGY3
