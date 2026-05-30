@@ -2595,14 +2595,26 @@ function renderProxies() {
   el.innerHTML = '';
   _proxies.forEach(function(p, i) {
     el.innerHTML += '<div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">' +
+      '<span style="color:#888;font-size:11px;min-width:20px">#'+(i+1)+'</span>' +
       '<input class="input" placeholder="Назва" value="'+escHtml(p.name||'')+'" oninput="_proxies['+i+'].name=this.value;syncProxies()" style="width:100px">' +
       '<input class="input" placeholder="URL (https://...)" value="'+escHtml(p.url||'')+'" oninput="_proxies['+i+'].url=this.value;syncProxies()" style="flex:1">' +
       '<input class="input" placeholder="Token" value="'+escHtml(p.token||'')+'" oninput="_proxies['+i+'].token=this.value;syncProxies()" style="width:120px">' +
       '<input class="input" placeholder="Модель" value="'+escHtml(p.model||'')+'" oninput="_proxies['+i+'].model=this.value;syncProxies()" style="width:150px">' +
+      '<button type="button" onclick="moveProxy('+i+',-1)" style="background:#6b7280;color:#fff;border:none;border-radius:6px;padding:4px 8px;cursor:pointer" title="Вгору">↑</button>' +
+      '<button type="button" onclick="moveProxy('+i+',1)" style="background:#6b7280;color:#fff;border:none;border-radius:6px;padding:4px 8px;cursor:pointer" title="Вниз">↓</button>' +
       '<button type="button" onclick="removeProxy('+i+')" style="background:#ef4444;color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer">✕</button>' +
     '</div>';
   });
   syncProxies();
+}
+
+function moveProxy(i, dir) {
+  var j = i + dir;
+  if (j < 0 || j >= _proxies.length) return;
+  var tmp = _proxies[i];
+  _proxies[i] = _proxies[j];
+  _proxies[j] = tmp;
+  renderProxies();
 }
 function addProxy() {
   _proxies.push({name:'',url:'',token:'not-needed',model:'gemini-2.5-flash-8b-exp'});
