@@ -993,7 +993,7 @@ async def main():
             await event.respond(_t(lang, "shelter_geo_msg"), parse_mode='md')
             return
         try:
-            async with httpx.AsyncClient(timeout=30.0) as hc:
+            async with httpx.AsyncClient(timeout=60.0) as hc:
                 resp = await hc.post(
                     "http://localhost:8770/chat",
                     json={"message": user_text, "session_id": session_id, "lang": lang},
