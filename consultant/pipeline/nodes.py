@@ -272,36 +272,48 @@ _proxy_cfg_ts: float = 0.0
 _PROXY_TTL = 30.0
 
 
-def _get_proxy_cfg() -> tuple[str, str, str]:
-    global _proxy_cfg_cache, _proxy_cfg_ts
-    now = time.monotonic()
-    if _proxy_cfg_cache is not None and now - _proxy_cfg_ts < _PROXY_TTL:
-        return _proxy_cfg_cache
+def _get_proxies() -> list[dict]:
+    """Return ordered list of proxy configs from llm_proxies[] or single llm_proxy_url."""
     import json as _json
     config_path = _PROJECT_ROOT / "config.json"
     try:
         cfg = _json.loads(config_path.read_text(encoding="utf-8"))
-        url   = cfg.get("llm_proxy_url")   or os.getenv("PROXY_URL",   PROXY_URL)
-        token = cfg.get("llm_proxy_token") or os.getenv("PROXY_TOKEN", PROXY_TOKEN)
-        model = cfg.get("llm_proxy_model") or os.getenv("PROXY_MODEL", PROXY_MODEL)
-        result = url.rstrip("/"), token, model
+        proxies = cfg.get("llm_proxies")
+        if proxies and isinstance(proxies, list):
+            return [
+                {"url": p["url"].rstrip("/"),
+                 "token": p.get("token", "not-needed"),
+                 "model": p.get("model", PROXY_MODEL),
+                 "name": p.get("name", p["url"])}
+                for p in proxies if p.get("url")
+            ]
+        url = (cfg.get("llm_proxy_url") or os.getenv("PROXY_URL", PROXY_URL)).rstrip("/")
+        return [{"url": url,
+                 "token": cfg.get("llm_proxy_token") or os.getenv("PROXY_TOKEN", PROXY_TOKEN),
+                 "model": cfg.get("llm_proxy_model") or os.getenv("PROXY_MODEL", PROXY_MODEL),
+                 "name": "default"}]
     except Exception:
-        result = PROXY_URL, PROXY_TOKEN, PROXY_MODEL
-    _proxy_cfg_cache = result
-    _proxy_cfg_ts = now
-    return result
+        return [{"url": PROXY_URL, "token": PROXY_TOKEN, "model": PROXY_MODEL, "name": "env"}]
 
 
 def _llm_call(messages: list[dict]) -> str:
-    proxy_url, proxy_token, proxy_model = _get_proxy_cfg()
-    with httpx.Client(timeout=60.0) as client:
-        resp = client.post(
-            f"{proxy_url}/chat/completions",
-            json={"model": proxy_model, "messages": messages, "temperature": 0.15},
-            headers={"Authorization": f"Bearer {proxy_token}"},
-        )
-        resp.raise_for_status()
-        return resp.json()["choices"][0]["message"]["content"]
+    """Try each proxy in order; fall back to next on error."""
+    proxies = _get_proxies()
+    last_err = None
+    for proxy in proxies:
+        try:
+            with httpx.Client(timeout=25.0) as client:
+                resp = client.post(
+                    f"{proxy['url']}/chat/completions",
+                    json={"model": proxy["model"], "messages": messages, "temperature": 0.15},
+                    headers={"Authorization": f"Bearer {proxy['token']}"},
+                )
+                resp.raise_for_status()
+                return resp.json()["choices"][0]["message"]["content"]
+        except Exception as e:
+            log.warning(f"[llm_call] proxy {proxy.get('name', proxy['url'])} failed: {e}")
+            last_err = e
+    raise (last_err or RuntimeError("All LLM proxies failed"))
 
 
 def _format_offline(kb_context: str, query: str) -> str:

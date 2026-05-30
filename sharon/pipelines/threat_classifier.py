@@ -75,10 +75,21 @@ async def extract_entities(state: ThreatState) -> ThreatState:
     _llm_key = cfg.get("llm_proxy_token") or cfg.get("goclaw_api_key", "")
     _llm_model = cfg.get("llm_proxy_model") or cfg.get("goclaw_model", "")
     
-    if _llm_url and _llm_key:
-        if not _llm_url.rstrip("/").endswith("/chat/completions"):
-            _llm_url = _llm_url.rstrip("/") + "/chat/completions"
-            
+    _proxy_list = cfg.get("llm_proxies")
+    if _proxy_list and isinstance(_proxy_list, list):
+        _proxies = [{"url": p["url"].rstrip("/") + "/chat/completions",
+                     "token": p.get("token", "not-needed"),
+                     "model": p.get("model", _llm_model or "gemini-2.5-flash"),
+                     "name": p.get("name", p["url"])} for p in _proxy_list if p.get("url")]
+    elif _llm_url:
+        _url = _llm_url.rstrip("/")
+        if not _url.endswith("/chat/completions"): _url += "/chat/completions"
+        _proxies = [{"url": _url, "token": _llm_key,
+                     "model": _llm_model or "gemini-2.5-flash", "name": "single"}]
+    else:
+        _proxies = []
+        
+    if _proxies:
         prompt = (
             "Ти — Sharon, інтелектуальний аналітик загроз UAV та ракетних атак в Україні.\n"
             "Тобі надано текст повідомлення з моніторингового каналу.\n"
@@ -91,31 +102,33 @@ async def extract_entities(state: ThreatState) -> ThreatState:
             f"Текст повідомлення: \"{text}\""
         )
         
-        try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                resp = await client.post(
-                    _llm_url,
-                    headers={
-                        "Authorization": f"Bearer {_llm_key}",
-                        "Content-Type": "application/json",
-                    },
-                    json={
-                        "model": _llm_model,
-                        "messages": [{"role": "user", "content": prompt}],
-                        "max_tokens": 150,
-                        "temperature": 0,
-                    },
-                )
-                resp.raise_for_status()
-                content = resp.json()["choices"][0]["message"]["content"].strip()
-                content = re.sub(r"^```(?:json)?\s*|\s*```$", "", content, flags=re.MULTILINE).strip()
-                result = json.loads(content)
-                
-                threat_type = result.get("threat_type", threat_type)
-                region = result.get("region", region)
-                event_time = result.get("time", event_time)
-        except Exception as e:
-            log.error(f"[Sharon Pipeline] AI entity extraction failed: {e}")
+        for _p in _proxies:
+            try:
+                async with httpx.AsyncClient(timeout=15.0) as client:
+                    resp = await client.post(
+                        _p["url"],
+                        headers={
+                            "Authorization": f"Bearer {_p['token']}",
+                            "Content-Type": "application/json",
+                        },
+                        json={
+                            "model": _p["model"],
+                            "messages": [{"role": "user", "content": prompt}],
+                            "max_tokens": 150,
+                            "temperature": 0,
+                        },
+                    )
+                    resp.raise_for_status()
+                    content = resp.json()["choices"][0]["message"]["content"].strip()
+                    content = re.sub(r"^```(?:json)?\s*|\s*```$", "", content, flags=re.MULTILINE).strip()
+                    result = json.loads(content)
+                    
+                    threat_type = result.get("threat_type", threat_type)
+                    region = result.get("region", region)
+                    event_time = result.get("time", event_time)
+                    break
+            except Exception as e:
+                log.warning(f"[threat_classifier] proxy {_p['name']} failed: {e}")
             
     if not region:
         region = cfg.get("city_region", "")
@@ -141,6 +154,9 @@ async def assess_severity(state: ThreatState) -> ThreatState:
     city = cfg.get("city", "Олександрія").lower()
     
     score = 1
+    # Boost score if LLM already identified a real threat type
+    if state.get("threat_type", "Невідомо") != "Невідомо":
+        score += 2
     if city in text_lower:
         score += 3
     for m in ["над містом", "над нами", "над районом", "низько", "поряд", "поруч", "напрямок міста"]:

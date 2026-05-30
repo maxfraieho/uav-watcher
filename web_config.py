@@ -1769,25 +1769,15 @@ HTML = """<!DOCTYPE html>
 
     <div id="sec-ai" class="sec-divider" style="--sc:#f59e0b"><span>&#129302; AI / LLM Proxy</span></div>
 
-    <!-- LLM PROXY SETTINGS -->
     <div class="card">
-      <div class="card-header"><span class="card-title">&#129302; AI Proxy — LLM налаштування</span></div>
+      <div class="card-header"><span class="card-title">&#129302; AI Proxy — список проксі (fallback за чергою)</span></div>
       <div class="card-body">
-        <div class="hint" style="margin-bottom:12px">OpenAI-сумісний проксі для AI-консультанта. Вкажіть базову URL (без <code>/chat/completions</code>). Локальна модель без інтернету: <b>Ollama</b> URL=<code>http://localhost:11434/v1</code>, Token=<code>ollama</code>, Model=<code>qwen2:1.5b</code>.</div>
         <form method="POST" action="/save-llm">
-          <div class="field-group">
-            <label class="field-label">Proxy URL</label>
-            <input class="input" name="llm_proxy_url" value="{llm_proxy_url}" placeholder="https://YOUR_PROXY_URL/v1">
-          </div>
-          <div class="field-group">
-            <label class="field-label">API Token</label>
-            <input class="input" type="password" name="llm_proxy_token" value="{llm_proxy_token}" placeholder="your-token (або freecc для публічного проксі)">
-          </div>
-          <div class="field-group">
-            <label class="field-label">Model</label>
-            <input class="input" name="llm_proxy_model" value="{llm_proxy_model}" placeholder="gpt-4o-mini">
-          </div>
-          <button type="submit" class="btn btn-primary">&#10003; Зберегти AI налаштування</button>
+          <div id="proxy-list"></div>
+          <button type="button" onclick="addProxy()" class="btn" style="margin-top:8px">+ Додати проксі</button>
+          <input type="hidden" name="llm_proxies_json" id="llm_proxies_json">
+          <p style="color:#888;font-size:12px;margin-top:8px">Перший у списку — основний. При недоступності — автоматичний перехід на наступний.</p>
+          <button type="submit" class="btn btn-primary" style="margin-top:12px">&#10003; Зберегти AI налаштування</button>
         </form>
       </div>
     </div>
@@ -2597,16 +2587,54 @@ function checkOllama() {
     });
 }
 
+var _proxies = {llm_proxies_js};
+
+function renderProxies() {
+  var el = document.getElementById('proxy-list');
+  if (!el) return;
+  el.innerHTML = '';
+  _proxies.forEach(function(p, i) {
+    el.innerHTML += '<div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">' +
+      '<input class="input" placeholder="Назва" value="'+escHtml(p.name||'')+'" oninput="_proxies['+i+'].name=this.value;syncProxies()" style="width:100px">' +
+      '<input class="input" placeholder="URL (https://...)" value="'+escHtml(p.url||'')+'" oninput="_proxies['+i+'].url=this.value;syncProxies()" style="flex:1">' +
+      '<input class="input" placeholder="Token" value="'+escHtml(p.token||'')+'" oninput="_proxies['+i+'].token=this.value;syncProxies()" style="width:120px">' +
+      '<input class="input" placeholder="Модель" value="'+escHtml(p.model||'')+'" oninput="_proxies['+i+'].model=this.value;syncProxies()" style="width:150px">' +
+      '<button type="button" onclick="removeProxy('+i+')" style="background:#ef4444;color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer">✕</button>' +
+    '</div>';
+  });
+  syncProxies();
+}
+function addProxy() {
+  _proxies.push({name:'',url:'',token:'not-needed',model:'gemini-2.5-flash-8b-exp'});
+  renderProxies();
+}
+function removeProxy(i) {
+  _proxies.splice(i,1);
+  renderProxies();
+}
+function syncProxies() {
+  var el = document.getElementById('llm_proxies_json');
+  if (el) el.value = JSON.stringify(_proxies);
+}
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
 function selectOllamaModel(model, ram) {
-  document.querySelector('input[name="llm_proxy_url"]').value = 'http://localhost:11434/v1';
-  document.querySelector('input[name="llm_proxy_token"]').value = 'ollama';
-  document.querySelector('input[name="llm_proxy_model"]').value = model;
+  if (_proxies.length === 0) {
+    _proxies.push({name: 'Ollama', url: 'http://localhost:11434/v1', token: 'ollama', model: model});
+  } else {
+    _proxies[0].name = 'Ollama';
+    _proxies[0].url = 'http://localhost:11434/v1';
+    _proxies[0].token = 'ollama';
+    _proxies[0].model = model;
+  }
+  renderProxies();
   var st = document.getElementById('ollama-status');
   st.className = 'ollama-st ok'; st.style.display = 'flex';
   st.textContent = '✅ Модель ' + model + ' вибрана (' + ram + '). Збережи налаштування!';
   window.scrollTo({top: document.getElementById('sec-ai').offsetTop - 60, behavior: 'smooth'});
 }
 
+renderProxies();
 </script>
 
 <div class="chat-backdrop" id="chat-backdrop" onclick="toggleChat()"></div>
@@ -2708,6 +2736,7 @@ class Handler(BaseHTTPRequestHandler):
             "llm_proxy_url": (cfg.get("llm_proxy_url") or cfg.get("goclaw_url", "").replace("/chat/completions", "")).rstrip("/"),
             "llm_proxy_token": cfg.get("llm_proxy_token") or cfg.get("goclaw_api_key", ""),
             "llm_proxy_model": cfg.get("llm_proxy_model") or cfg.get("goclaw_model", ""),
+            "llm_proxies_js": json.dumps(cfg.get("llm_proxies", []), ensure_ascii=False),
             "user_channels_html": user_channels_html,
             "user_channel_count": str(len(user_chs)),
             "channel_total": str(len(user_chs) + len(LOCKED_CHANNELS)),
@@ -3128,14 +3157,23 @@ class Handler(BaseHTTPRequestHandler):
                 self.redirect(flash="✓ Bot token збережено")
 
             elif path == "/save-llm":
-                base_url = get("llm_proxy_url").strip().rstrip("/")
-                cfg["llm_proxy_url"]   = base_url
-                cfg["llm_proxy_token"] = get("llm_proxy_token").strip()
-                cfg["llm_proxy_model"] = get("llm_proxy_model").strip() or "gpt-4o-mini"
-                # Keep goclaw_* in sync for backward compat with classifier
-                cfg["goclaw_url"]      = base_url + "/chat/completions" if base_url else ""
-                cfg["goclaw_api_key"]  = cfg["llm_proxy_token"]
-                cfg["goclaw_model"]    = cfg["llm_proxy_model"]
+                llm_proxies_raw = get("llm_proxies_json", "").strip()
+                if llm_proxies_raw:
+                    try:
+                        import json as _j
+                        proxies = _j.loads(llm_proxies_raw)
+                        cfg["llm_proxies"] = [p for p in proxies if p.get("url","").strip()]
+                        # Keep single fields in sync using the first proxy for compatibility
+                        if cfg["llm_proxies"]:
+                            first_p = cfg["llm_proxies"][0]
+                            cfg["llm_proxy_url"]   = first_p["url"].rstrip("/")
+                            cfg["llm_proxy_token"] = first_p.get("token", "not-needed")
+                            cfg["llm_proxy_model"] = first_p.get("model") or "gemini-2.5-flash-8b-exp"
+                            cfg["goclaw_url"]      = cfg["llm_proxy_url"] + "/chat/completions"
+                            cfg["goclaw_api_key"]  = cfg["llm_proxy_token"]
+                            cfg["goclaw_model"]    = cfg["llm_proxy_model"]
+                    except Exception:
+                        pass
                 save_config(cfg)
                 self.redirect(flash="✓ AI Proxy налаштування збережено")
 

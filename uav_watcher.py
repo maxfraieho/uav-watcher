@@ -273,33 +273,41 @@ async def ai_classify(text: str, cfg: dict) -> tuple[bool, str]:
         return kw_result, kw_reason
 
     prompt = build_ai_prompt(text, city, region)
-    try:
-        _llm_url = cfg.get("llm_proxy_url") or cfg.get("goclaw_url", "")
-        if _llm_url and not _llm_url.rstrip("/").endswith("/chat/completions"):
-            _llm_url = _llm_url.rstrip("/") + "/chat/completions"
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.post(
-                _llm_url,
-                headers={
-                    "Authorization": f"Bearer {cfg.get('llm_proxy_token') or cfg.get('goclaw_api_key', '')}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": cfg.get("llm_proxy_model") or cfg.get("goclaw_model", ""),
-                    "messages": [{"role": "user", "content": prompt}],
-                    "max_tokens": 120,
-                    "temperature": 0,
-                },
-            )
-            resp.raise_for_status()
-            content = resp.json()["choices"][0]["message"]["content"].strip()
-            # Strip markdown code fences if model adds them
-            content = re.sub(r"^```(?:json)?\s*|\s*```$", "", content, flags=re.MULTILINE).strip()
-            result = json.loads(content)
-            return result.get("threat", False), result.get("reason", "")
-    except Exception as e:
-        log.error(f"AI classify error: {e}")
-        return False, ""
+    # Build ordered proxy list from config
+    _proxy_list = cfg.get("llm_proxies")
+    if _proxy_list and isinstance(_proxy_list, list):
+        _proxies = [{"url": p["url"].rstrip("/")+"/chat/completions",
+                     "token": p.get("token","not-needed"),
+                     "model": p.get("model","gemini-2.5-flash"),
+                     "name": p.get("name",p["url"])} for p in _proxy_list if p.get("url")]
+    else:
+        _u = (cfg.get("llm_proxy_url") or cfg.get("goclaw_url","")).rstrip("/")
+        if _u and not _u.endswith("/chat/completions"): _u += "/chat/completions"
+        _proxies = [{"url":_u,"token":cfg.get("llm_proxy_token") or cfg.get("goclaw_api_key",""),
+                     "model":cfg.get("llm_proxy_model") or cfg.get("goclaw_model","gemini-2.5-flash"),
+                     "name":"single"}] if _u else []
+    last_err = None
+    for _proxy in _proxies:
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.post(
+                    _proxy["url"],
+                    headers={"Authorization": f"Bearer {_proxy['token']}",
+                             "Content-Type": "application/json"},
+                    json={"model": _proxy["model"],
+                          "messages": [{"role": "user", "content": prompt}],
+                          "max_tokens": 120, "temperature": 0},
+                )
+                resp.raise_for_status()
+                content = resp.json()["choices"][0]["message"]["content"].strip()
+                content = re.sub(r"^```(?:json)?\s*|\s*```$", "", content, flags=re.MULTILINE).strip()
+                result = json.loads(content)
+                return result.get("threat", False), result.get("reason", "")
+        except Exception as e:
+            log.warning(f"AI classify proxy {_proxy.get('name')} failed: {e}")
+            last_err = e
+    log.error(f"AI classify all proxies failed: {last_err}")
+    return False, ""
 
 
 async def send_notification(text: str, reason: str, cfg: dict, channel_name: str = "", channel_username: str = "", message_id: int = 0):
